@@ -51,6 +51,7 @@
 .\code_vxl_stm32f4\main.o: ../Middlewares/Third_Party/FreeRTOS/Source/include/queue.h
 .\code_vxl_stm32f4\main.o: ../Middlewares/Third_Party/FreeRTOS/Source/include/semphr.h
 .\code_vxl_stm32f4\main.o: ../Middlewares/Third_Party/FreeRTOS/Source/include/event_groups.h
+.\code_vxl_stm32f4\main.o: ../Inc/board_io.h
 .\code_vxl_stm32f4\main.o: C:\Keil_v5\ARM\ARMCC\Bin\..\include\string.h
 .\code_vxl_stm32f4\main.o: ../Inc/app_digital_input.h
 .\code_vxl_stm32f4\main.o: ../Inc/app_rs485.h
