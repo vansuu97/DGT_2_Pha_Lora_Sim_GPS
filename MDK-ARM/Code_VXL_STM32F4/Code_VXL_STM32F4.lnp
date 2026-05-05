@@ -7,6 +7,8 @@
 ".\code_vxl_stm32f4\stm32f4xx_it.o"
 ".\code_vxl_stm32f4\stm32f4xx_hal_msp.o"
 ".\code_vxl_stm32f4\stm32f4xx_hal_timebase_tim.o"
+".\code_vxl_stm32f4\app_dgt.o"
+".\code_vxl_stm32f4\app_i2cvsesp32.o"
 ".\code_vxl_stm32f4\stm32f4xx_hal_tim.o"
 ".\code_vxl_stm32f4\stm32f4xx_hal_tim_ex.o"
 ".\code_vxl_stm32f4\stm32f4xx_hal_dac.o"

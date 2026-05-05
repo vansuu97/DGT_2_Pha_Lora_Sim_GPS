@@ -22,10 +22,12 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-#include "board_io.h"
 #include <string.h>
+#include "board_io.h"
 #include "app_digital_input.h"
 #include "app_rs485.h"
+#include "app_DGT.h"
+#include "app_I2CvsESP32.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -87,11 +89,10 @@ uint8_t I2C_Count = 150;
     RTC_DateTypeDef getDate = {0};
 
 // DGT variables 
-	uint16_t suu1=0, suu2=0, suu3=0, suu4=0, suu5=0, suu6=0;
 	uint16_t input_ok = 0, ResetRTC_count = 0, HMI_initValue_count = 0;
-	uint32_t X1=5*10000, V1=3*10000, GT1=2*10000, D1=220000; 
-	uint32_t X2=5*10000, V2=3*10000, GT2=2*10000, D2=220000;
-	uint32_t X3=5*10000, V3=3*10000, GT3=2*10000, D3=220000;
+	uint16_t X1, V1, GT1, D1; 
+	uint16_t X2, V2, GT2, D2;
+	uint16_t X3, V3, GT3, D3;
 	uint16_t Xanh1=5, Vang1=3, GiaiToa1=2, Do1=22; 
 	uint16_t Xanh2=5, Vang2=3, GiaiToa2=2, Do2=22;
 	uint16_t Xanh3=5, Vang3=3, GiaiToa3=2, Do3=22;
@@ -101,10 +102,15 @@ uint8_t I2C_Count = 150;
 	volatile uint32_t t_count = 0, delay_count = 0;
 	uint32_t Total_Time = 0, CaoDiem_Total_Time, Dummy_1;
 	uint8_t BlinkYel_ENA1 = 1, BlinkYel_ENA2 = 0, Thaco_Blink = 0, CaoDiem_ENA;
+  uint8_t BlinkYel_Auto = 0;
 	uint8_t begin_hour1 = 22, end_hour1 = 5, begin_min1 = 0, end_min1 = 0; 	// Chop vang 1
 	uint8_t begin_hour2 = 0 , end_hour2 = 0, begin_min2 = 0, end_min2 = 0;	// chop vang 2
 	uint8_t begin_hour3 = 0 , end_hour3 = 0, begin_min3 = 0, end_min3 = 0;	// Cao diem
-	uint16_t min_realTime=0, hour_realTime=0;
+	uint16_t min_realTime = 0, hour_realTime = 0;
+  uint32_t Walk_count;
+  uint8_t Light_Status = 0;
+  uint8_t Voltage1 = 0, Voltage2 = 0;
+  uint8_t Current1 = 0, Current2 = 0;
 	
 // DAC variables
 	float dac_voltage = 1.5f;
@@ -120,41 +126,8 @@ static volatile uint8_t tim7_1ms_div = 0u;
 uint8_t I1_F, I2_F, I3_F, I4_F, I5_F;
 
 // Flash ROM variables
-	uint32_t myFlashData[10] = {0}; //24 
+uint32_t myFlashData[10] = {0}; //24 
 	
-	const uint8_t CRC8_TABLE[256] = {
-    0x00, 0x07, 0x0E, 0x09, 0x1C, 0x1B, 0x12, 0x15,
-    0x38, 0x3F, 0x36, 0x31, 0x24, 0x23, 0x2A, 0x2D,
-    0x70, 0x77, 0x7E, 0x79, 0x6C, 0x6B, 0x62, 0x65,
-    0x48, 0x4F, 0x46, 0x41, 0x54, 0x53, 0x5A, 0x5D,
-    0xE0, 0xE7, 0xEE, 0xE9, 0xFC, 0xFB, 0xF2, 0xF5,
-    0xD8, 0xDF, 0xD6, 0xD1, 0xC4, 0xC3, 0xCA, 0xCD,
-    0x90, 0x97, 0x9E, 0x99, 0x8C, 0x8B, 0x82, 0x85,
-    0xA8, 0xAF, 0xA6, 0xA1, 0xB4, 0xB3, 0xBA, 0xBD,
-    0xC7, 0xC0, 0xC9, 0xCE, 0xDB, 0xDC, 0xD5, 0xD2,
-    0xFF, 0xF8, 0xF1, 0xF6, 0xE3, 0xE4, 0xED, 0xEA,
-    0xB7, 0xB0, 0xB9, 0xBE, 0xAB, 0xAC, 0xA5, 0xA2,
-    0x8F, 0x88, 0x81, 0x86, 0x93, 0x94, 0x9D, 0x9A,
-    0x27, 0x20, 0x29, 0x2E, 0x3B, 0x3C, 0x35, 0x32,
-    0x1F, 0x18, 0x11, 0x16, 0x03, 0x04, 0x0D, 0x0A,
-    0x57, 0x50, 0x59, 0x5E, 0x4B, 0x4C, 0x45, 0x42,
-    0x6F, 0x68, 0x61, 0x66, 0x73, 0x74, 0x7D, 0x7A,
-    0x89, 0x8E, 0x87, 0x80, 0x95, 0x92, 0x9B, 0x9C,
-    0xB1, 0xB6, 0xBF, 0xB8, 0xAD, 0xAA, 0xA3, 0xA4,
-    0xF9, 0xFE, 0xF7, 0xF0, 0xE5, 0xE2, 0xEB, 0xEC,
-    0xC1, 0xC6, 0xCF, 0xC8, 0xDD, 0xDA, 0xD3, 0xD4,
-    0x69, 0x6E, 0x67, 0x60, 0x75, 0x72, 0x7B, 0x7C,
-    0x51, 0x56, 0x5F, 0x58, 0x4D, 0x4A, 0x43, 0x44,
-    0x19, 0x1E, 0x17, 0x10, 0x05, 0x02, 0x0B, 0x0C,
-    0x21, 0x26, 0x2F, 0x28, 0x3D, 0x3A, 0x33, 0x34,
-    0x4E, 0x49, 0x40, 0x47, 0x52, 0x55, 0x5C, 0x5B,
-    0x76, 0x71, 0x78, 0x7F, 0x6A, 0x6D, 0x64, 0x63,
-    0x3E, 0x39, 0x30, 0x37, 0x22, 0x25, 0x2C, 0x2B,
-    0x06, 0x01, 0x08, 0x0F, 0x1A, 0x1D, 0x14, 0x13,
-    0xAE, 0xA9, 0xA0, 0xA7, 0xB2, 0xB5, 0xBC, 0xBB,
-    0x96, 0x91, 0x98, 0x9F, 0x8A, 0x8D, 0x84, 0x83,
-    0xDE, 0xD9, 0xD0, 0xD7, 0xC2, 0xC5, 0xCC, 0xCB,
-    0xE6, 0xE1, 0xE8, 0xEF, 0xFA, 0xFD, 0xF4, 0xF3};
 
 /* USER CODE END PV */
 
@@ -292,7 +265,12 @@ int main(void)
 		.dir_pin  = RS485_DIR_Pin,
 		.slave_id = HMI_ID,
 	};
-	AppRs485_Init(&rs485_cfg);
+  // I2c
+  AppI2CvsESP32_Config_t i2c_esp32_cfg = {
+    .hi2c = &hi2c1,
+    .slave_addr_7bit = APP_I2CVSESP32_ADDR_7BIT,
+    .timeout_ms = 100U,
+};
 	// Read from flash
 	Flash_GetData(FLASH_ADD0, &myFlashData[0], 10);
 	LoadSettings_from_Flash();
@@ -301,6 +279,8 @@ int main(void)
 	ETH_PWR_0;
 	// App
 	AppDigitalInput_Init();
+	AppRs485_Init(&rs485_cfg);
+  AppI2CvsESP32_Init(&i2c_esp32_cfg);
 	
   /* USER CODE END 2 */
 
@@ -768,47 +748,66 @@ static void MX_GPIO_Init(void)
 }
 
 /* USER CODE BEGIN 4 */
-
-static uint8_t crc8_cal(const uint8_t *data, size_t length) {
-    uint8_t crc = 0x00;
-    for (size_t i = 0; i < length; ++i) {
-        crc = CRC8_TABLE[crc ^ data[i]];
-    }
-    return crc;
-}
-
 void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
 {
 	AppRs485_RxCpltCallback(huart);
 }
 
 static void I2C_SendFrame(void){ 
-	I2C_Count++;
-	if (I2C_Count>199) I2C_Count = 0;
-	txData[0] = I2C_FRAME_START;			// Start frame
-	txData[1] = (uint8_t)getDate.Date; 		// Ngay
-	txData[2] = (uint8_t)getDate.Month; 	// Thang
-	txData[3] = 20; 						// Nam 20
-	txData[4] = (uint8_t)getDate.Year; 		// Nam 26
-	txData[5] = (uint8_t)getTime.Hours; 	// Gio
-	txData[6] = (uint8_t)getTime.Minutes; 	// Phut
-	txData[7] = (uint8_t)getTime.Seconds; 	// Giay
-	txData[8] = 101; 						// Xanh 1
-	txData[9] = 3; 							// Vang 1
-	txData[10] = 2; 						// Giai Toa 1
-	txData[11] = 199; 						// Xanh 2
-	txData[12] = 3; 						// Vang 2
-	txData[13] = 2; 						// Giai Toa 2
-	txData[14] = 10; 						// Xanh 3
-	txData[15] = 10; 						// Vang 3
-	txData[16] = 10; 						// Giai Toa 3
-	txData[17] = 10; 						// Volt 1
-	txData[18] = 10; 						// Volt 2
-	txData[19] = 10; 						// Current 1
-	txData[20] = I2C_Count; 				// Current 2
-	txData[21] = I2C_FRAME_END; 			// Stop frame
-	
-	HAL_I2C_Master_Transmit(&hi2c1, (ESP32_ADDR << 1), txData, I2C_FRAME_SIZE, 100);
+	AppI2CvsESP32_Payload_t payload;
+  payload.realtime.date     = (uint8_t)getDate.Date;
+  payload.realtime.month    = (uint8_t)getDate.Month;
+  payload.realtime.year     = (uint8_t)getDate.Year;         // 2026  -> 26
+
+  payload.realtime.hour     = (uint8_t)getTime.Hours;
+  payload.realtime.minute   = (uint8_t)getTime.Minutes;
+  payload.realtime.second   = (uint8_t)getTime.Seconds;
+
+  payload.realtime.voltage1 = (uint8_t)Voltage1;
+  payload.realtime.voltage2 = (uint8_t)Voltage2;
+  payload.realtime.current1 = (uint8_t)Current1;
+  payload.realtime.current2 = (uint8_t)Current2;
+
+  payload.realtime.begin_hour1 = begin_hour1;
+  payload.realtime.begin_min1  = begin_min1;
+  payload.realtime.end_hour1   = end_hour1;
+  payload.realtime.end_min1    = end_min1;
+
+  payload.normal.x1  = (uint8_t)Xanh1;
+  payload.normal.v1  = (uint8_t)Vang1;
+  payload.normal.gt1 = (uint8_t)GiaiToa1;
+
+  payload.normal.x2  = (uint8_t)Xanh2;
+  payload.normal.v2  = (uint8_t)Vang2;
+  payload.normal.gt2 = (uint8_t)GiaiToa2;
+
+  payload.normal.x3  = (uint8_t)Xanh3;
+  payload.normal.v3  = (uint8_t)Vang3;
+  payload.normal.gt3 = (uint8_t)GiaiToa3;
+
+  payload.normal.begin_hour2 = begin_hour2;
+  payload.normal.begin_min2  = begin_min2;
+  payload.normal.end_hour2   = end_hour2;
+  payload.normal.end_min2    = end_min2;
+
+  payload.peak.begin_hour3 = begin_hour3;
+  payload.peak.begin_min3  = begin_min3;
+  payload.peak.end_hour3   = end_hour3;
+  payload.peak.end_min3    = end_min3;
+
+  payload.peak.peak_x1  = (uint8_t)CaoDiem_X1;
+  payload.peak.peak_v1  = (uint8_t)CaoDiem_V1;
+  payload.peak.peak_gt1 = (uint8_t)CaoDiem_GT1;
+
+  payload.peak.peak_x2  = (uint8_t)CaoDiem_X2;
+  payload.peak.peak_v2  = (uint8_t)CaoDiem_V2;
+  payload.peak.peak_gt2 = (uint8_t)CaoDiem_GT2;
+
+  payload.peak.peak_x3  = (uint8_t)CaoDiem_X3;
+  payload.peak.peak_v3  = (uint8_t)CaoDiem_V3;
+  payload.peak.peak_gt3 = (uint8_t)CaoDiem_GT3;
+
+  (void)AppI2CvsESP32_SendAll(&payload);
 } 
 
 static void RTC_SetDateTime(void){ // SET RTC
@@ -834,8 +833,7 @@ static void RTC_GetDateTime(void){ // Read RTC
     HAL_RTC_GetTime(&hrtc, &getTime, RTC_FORMAT_BIN);
     HAL_RTC_GetDate(&hrtc, &getDate, RTC_FORMAT_BIN);
 }
-static uint8_t Check_Time_Event(uint32_t period_count, uint32_t *time_prev)
-{
+static uint8_t Check_Time_Event(uint32_t period_count, uint32_t *time_prev){
     uint32_t time_now = delay_count;
 
     if ((uint32_t)(time_now - *time_prev) >= period_count)
@@ -847,15 +845,13 @@ static uint8_t Check_Time_Event(uint32_t period_count, uint32_t *time_prev)
     return 0u;
 }
 
-static uint8_t Check_2_5s_Event(void)
-{
+static uint8_t Check_2_5s_Event(void){
     static uint32_t time_prev = 0u;
 
     return Check_Time_Event(TIME_2_5S_COUNT, &time_prev);
 }
 
-static uint8_t Check_5s_Event(void)
-{
+static uint8_t Check_5s_Event(void){
     static uint32_t time_prev = 0u;
 
     return Check_Time_Event(TIME_5S_COUNT, &time_prev);
@@ -882,62 +878,13 @@ void StartMainTask(void const * argument)
 	I3_F = AppDigitalInput_Check(DIGITAL_INPUT_SWITCH_3);
 	I4_F = AppDigitalInput_Check(DIGITAL_INPUT_SWITCH_4);
 	I5_F = AppDigitalInput_Check(DIGITAL_INPUT_SWITCH_5);
-
-	if (Check_2_5s_Event()){
-    blink_state ^= 1u;
-
-    if (blink_state)
-    {
-        LED1_0;
-        LED2_1;
-        LED3_0;
-        LED4_1;
-        SL_0;
-        X1_1;
-        V1_0;
-        D1_1;
-        Xdb1_0;
-        Ddb1_1;
-        X2_0;
-        V2_1;
-        D2_0;
-        Xdb2_1;
-        Ddb2_0;
-        X3_1;
-        V3_0;
-        D3_1;
-        Xdb3_0;
-        Ddb3_1;
-    }
-    else
-    {
-        LED1_1;
-        LED2_0;
-        LED3_1;
-        LED4_0;
-        SL_1;
-        X1_0;
-        V1_1;
-        D1_0;
-        Xdb1_1;
-        Ddb1_0;
-        X2_1;
-        V2_0;
-        D2_1;
-        Xdb2_0;
-        Ddb2_1;
-        X3_0;
-        V3_1;
-        D3_0;
-        Xdb3_1;
-        Ddb3_0;
-    }
-}
 	
 	if (dac_voltage>9.9) dac_voltage = 9.9f;
 	dac_value = (uint32_t)((dac_voltage/3.0f) * 4095.0f / Vref); // dac_voltage 0..10V
 	HAL_DAC_SetValue(&hdac, DAC_CHANNEL_1, DAC_ALIGN_12B_R, dac_value);
 	HAL_DAC_SetValue(&hdac, DAC_CHANNEL_2, DAC_ALIGN_12B_R, dac_value);
+
+  AppDGT2P_Process();
 
     osDelay(10);
   }
@@ -964,16 +911,18 @@ void StartConnectivityTask(void const * argument)
 	//////////////////////////////////////////////////////////////
 	HAL_RTC_GetTime(&hrtc, &getTime, RTC_FORMAT_BIN);
 	HAL_RTC_GetDate(&hrtc, &getDate, RTC_FORMAT_BIN);
+  min_realTime  = (uint16_t)getTime.Minutes;
+  hour_realTime = (uint16_t)getTime.Hours;
 	
 	if (Check_5s_Event()){ // I2C_SendFrame each 5s
 		I2C_SendFrame();
     }
 	
-	///////////////////////////////////////////////////////////////////////
+	//////////////////////////////////////////////////////////////
 	AppRs485_Task();
-	////////////////////////////////////////////////////
+	//////////////////////////////////////////////////////////////
 	
-	if (HMI_initValue_count<=12000){// Init value to HMI
+	if (HMI_initValue_count<=1200){// Init value to HMI
 		HMI_initValue_count++;
 		//////
 		RS485_regbank[2][120] = Xanh1;		// xanh 1
@@ -1297,6 +1246,9 @@ if (htim->Instance == TIM7){// 0.1 ms interrupt
         tim7_1ms_div = 0u;
         AppDigitalInput_1msTask();
     }
+
+  Walk_count++;
+  if (Walk_count >= 10000u){Walk_count = 0u;}
   }
   /* USER CODE END Callback 1 */
 }

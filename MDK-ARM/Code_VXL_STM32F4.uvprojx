@@ -480,6 +480,16 @@
                 </FileArmAds>
               </FileOption>
             </File>
+            <File>
+              <FileName>app_DGT.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\Src\app_DGT.c</FilePath>
+            </File>
+            <File>
+              <FileName>app_I2CvsESP32.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\Src\app_I2CvsESP32.c</FilePath>
+            </File>
           </Files>
         </Group>
         <Group>
