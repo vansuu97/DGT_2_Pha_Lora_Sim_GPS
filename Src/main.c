@@ -753,62 +753,73 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
 	AppRs485_RxCpltCallback(huart);
 }
 
-static void I2C_SendFrame(void){ 
-	AppI2CvsESP32_Payload_t payload;
-  payload.realtime.date     = (uint8_t)getDate.Date;
-  payload.realtime.month    = (uint8_t)getDate.Month;
-  payload.realtime.year     = (uint8_t)getDate.Year;         // 2026  -> 26
+static void I2C_SendFrame(void)
+{
+    AppI2CvsESP32_Payload_t payload;
 
-  payload.realtime.hour     = (uint8_t)getTime.Hours;
-  payload.realtime.minute   = (uint8_t)getTime.Minutes;
-  payload.realtime.second   = (uint8_t)getTime.Seconds;
+    /* Frame 1: Realtime */
+    payload.realtime.date   = (uint8_t)getDate.Date;
+    payload.realtime.month  = (uint8_t)getDate.Month;
+    payload.realtime.year   = (uint8_t)getDate.Year;      /* 2026 -> 26 */
 
-  payload.realtime.voltage1 = (uint8_t)Voltage1;
-  payload.realtime.voltage2 = (uint8_t)Voltage2;
-  payload.realtime.current1 = (uint8_t)Current1;
-  payload.realtime.current2 = (uint8_t)Current2;
+    payload.realtime.hour   = (uint8_t)getTime.Hours;
+    payload.realtime.minute = (uint8_t)getTime.Minutes;
+    payload.realtime.second = (uint8_t)getTime.Seconds;
 
-  payload.realtime.begin_hour1 = begin_hour1;
-  payload.realtime.begin_min1  = begin_min1;
-  payload.realtime.end_hour1   = end_hour1;
-  payload.realtime.end_min1    = end_min1;
+    payload.realtime.voltage1 = (uint8_t)Voltage1;
+    payload.realtime.voltage2 = (uint8_t)Voltage2;
+    payload.realtime.current1 = (uint8_t)Current1;
+    payload.realtime.current2 = (uint8_t)Current2;
 
-  payload.normal.x1  = (uint8_t)Xanh1;
-  payload.normal.v1  = (uint8_t)Vang1;
-  payload.normal.gt1 = (uint8_t)GiaiToa1;
+    payload.realtime.begin_hour1 = (uint8_t)begin_hour1;
+    payload.realtime.begin_min1  = (uint8_t)begin_min1;
+    payload.realtime.end_hour1   = (uint8_t)end_hour1;
+    payload.realtime.end_min1    = (uint8_t)end_min1;
 
-  payload.normal.x2  = (uint8_t)Xanh2;
-  payload.normal.v2  = (uint8_t)Vang2;
-  payload.normal.gt2 = (uint8_t)GiaiToa2;
+    /* Frame 2: Normal setting + control flags */
+    payload.normal.control_flags =
+        AppI2CvsESP32_MakeControlFlags((uint8_t)BlinkYel_ENA1,
+                                        (uint8_t)BlinkYel_ENA2,
+                                        (uint8_t)Thaco_Blink,
+                                        (uint8_t)CaoDiem_ENA);
 
-  payload.normal.x3  = (uint8_t)Xanh3;
-  payload.normal.v3  = (uint8_t)Vang3;
-  payload.normal.gt3 = (uint8_t)GiaiToa3;
+    payload.normal.x1  = (uint8_t)Xanh1;
+    payload.normal.v1  = (uint8_t)Vang1;
+    payload.normal.gt1 = (uint8_t)GiaiToa1;
 
-  payload.normal.begin_hour2 = begin_hour2;
-  payload.normal.begin_min2  = begin_min2;
-  payload.normal.end_hour2   = end_hour2;
-  payload.normal.end_min2    = end_min2;
+    payload.normal.x2  = (uint8_t)Xanh2;
+    payload.normal.v2  = (uint8_t)Vang2;
+    payload.normal.gt2 = (uint8_t)GiaiToa2;
 
-  payload.peak.begin_hour3 = begin_hour3;
-  payload.peak.begin_min3  = begin_min3;
-  payload.peak.end_hour3   = end_hour3;
-  payload.peak.end_min3    = end_min3;
+    payload.normal.x3  = (uint8_t)Xanh3;
+    payload.normal.v3  = (uint8_t)Vang3;
+    payload.normal.gt3 = (uint8_t)GiaiToa3;
 
-  payload.peak.peak_x1  = (uint8_t)CaoDiem_X1;
-  payload.peak.peak_v1  = (uint8_t)CaoDiem_V1;
-  payload.peak.peak_gt1 = (uint8_t)CaoDiem_GT1;
+    payload.normal.begin_hour2 = (uint8_t)begin_hour2;
+    payload.normal.begin_min2  = (uint8_t)begin_min2;
+    payload.normal.end_hour2   = (uint8_t)end_hour2;
+    payload.normal.end_min2    = (uint8_t)end_min2;
 
-  payload.peak.peak_x2  = (uint8_t)CaoDiem_X2;
-  payload.peak.peak_v2  = (uint8_t)CaoDiem_V2;
-  payload.peak.peak_gt2 = (uint8_t)CaoDiem_GT2;
+    /* Frame 3: Peak setting */
+    payload.peak.begin_hour3 = (uint8_t)begin_hour3;
+    payload.peak.begin_min3  = (uint8_t)begin_min3;
+    payload.peak.end_hour3   = (uint8_t)end_hour3;
+    payload.peak.end_min3    = (uint8_t)end_min3;
 
-  payload.peak.peak_x3  = (uint8_t)CaoDiem_X3;
-  payload.peak.peak_v3  = (uint8_t)CaoDiem_V3;
-  payload.peak.peak_gt3 = (uint8_t)CaoDiem_GT3;
+    payload.peak.peak_x1  = (uint8_t)CaoDiem_X1;
+    payload.peak.peak_v1  = (uint8_t)CaoDiem_V1;
+    payload.peak.peak_gt1 = (uint8_t)CaoDiem_GT1;
 
-  (void)AppI2CvsESP32_SendAll(&payload);
-} 
+    payload.peak.peak_x2  = (uint8_t)CaoDiem_X2;
+    payload.peak.peak_v2  = (uint8_t)CaoDiem_V2;
+    payload.peak.peak_gt2 = (uint8_t)CaoDiem_GT2;
+
+    payload.peak.peak_x3  = (uint8_t)CaoDiem_X3;
+    payload.peak.peak_v3  = (uint8_t)CaoDiem_V3;
+    payload.peak.peak_gt3 = (uint8_t)CaoDiem_GT3;
+
+    (void)AppI2CvsESP32_SendAll(&payload);
+}
 
 static void RTC_SetDateTime(void){ // SET RTC
     /* Set Time: 14:25:30 */

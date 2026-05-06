@@ -3,11 +3,11 @@
 #include <string.h>
 
 /*
- * I2C frame app for STM32 <-> ESP32.
+ * I2C frame app for STM32 -> ESP32.
  *
  * This module sends 3 separated packages:
  * 1. REALTIME        : current date/time, voltage/current, blink-yellow-1 time window.
- * 2. NORMAL_SETTING  : normal traffic-light timing values, blink-yellow-2 time window.
+ * 2. NORMAL_SETTING  : control flags, normal traffic-light timing values, blink-yellow-2 time window.
  * 3. PEAK_SETTING    : peak-time window and peak traffic-light timing values.
  *
  * Frame format: CMD + DATA + Counter + CRC8.
@@ -47,6 +47,7 @@ static const uint8_t CRC8_TABLE[256] = {
     0xDE, 0xD9, 0xD0, 0xD7, 0xC2, 0xC5, 0xCC, 0xCB,
     0xE6, 0xE1, 0xE8, 0xEF, 0xFA, 0xFD, 0xF4, 0xF3
 };
+
 
 static I2C_HandleTypeDef *s_hi2c = NULL;
 static uint16_t s_slave_addr_7bit = APP_I2CVSESP32_ADDR_7BIT;
@@ -95,6 +96,36 @@ static HAL_StatusTypeDef AppI2CvsESP32_Transmit(const uint8_t *frame, uint16_t l
                                    (uint8_t *)frame,
                                    length,
                                    s_timeout_ms);
+}
+
+uint8_t AppI2CvsESP32_MakeControlFlags(uint8_t blink_yel_ena1,
+                                        uint8_t blink_yel_ena2,
+                                        uint8_t thaco_blink,
+                                        uint8_t cao_diem_ena)
+{
+    uint8_t flags = 0U;
+
+    if ((blink_yel_ena1 & 0x01U) != 0U)
+    {
+        flags |= APP_I2CVSESP32_FLAG_BLINK_YEL_ENA1;
+    }
+
+    if ((blink_yel_ena2 & 0x01U) != 0U)
+    {
+        flags |= APP_I2CVSESP32_FLAG_BLINK_YEL_ENA2;
+    }
+
+    if ((thaco_blink & 0x01U) != 0U)
+    {
+        flags |= APP_I2CVSESP32_FLAG_THACO_BLINK;
+    }
+
+    if ((cao_diem_ena & 0x01U) != 0U)
+    {
+        flags |= APP_I2CVSESP32_FLAG_CAO_DIEM_ENA;
+    }
+
+    return flags;
 }
 
 void AppI2CvsESP32_Init(const AppI2CvsESP32_Config_t *config)
@@ -161,19 +192,20 @@ void AppI2CvsESP32_BuildNormalSetting(uint8_t frame[APP_I2CVSESP32_NORMAL_FRAME_
     }
 
     frame[0]  = APP_I2CVSESP32_CMD_NORMAL_SETTING;
-    frame[1]  = payload->x1;
-    frame[2]  = payload->v1;
-    frame[3]  = payload->gt1;
-    frame[4]  = payload->x2;
-    frame[5]  = payload->v2;
-    frame[6]  = payload->gt2;
-    frame[7]  = payload->x3;
-    frame[8]  = payload->v3;
-    frame[9]  = payload->gt3;
-    frame[10] = payload->begin_hour2;
-    frame[11] = payload->begin_min2;
-    frame[12] = payload->end_hour2;
-    frame[13] = payload->end_min2;
+    frame[1]  = payload->control_flags;
+    frame[2]  = payload->x1;
+    frame[3]  = payload->v1;
+    frame[4]  = payload->gt1;
+    frame[5]  = payload->x2;
+    frame[6]  = payload->v2;
+    frame[7]  = payload->gt2;
+    frame[8]  = payload->x3;
+    frame[9]  = payload->v3;
+    frame[10] = payload->gt3;
+    frame[11] = payload->begin_hour2;
+    frame[12] = payload->begin_min2;
+    frame[13] = payload->end_hour2;
+    frame[14] = payload->end_min2;
     frame[APP_I2CVSESP32_NORMAL_COUNTER_INDEX] = counter;
     frame[APP_I2CVSESP32_NORMAL_CRC_INDEX] = crc8_cal(frame, APP_I2CVSESP32_NORMAL_CRC_INDEX);
 }
@@ -261,12 +293,16 @@ HAL_StatusTypeDef AppI2CvsESP32_SendAll(const AppI2CvsESP32_Payload_t *payload)
         return status;
     }
 
+    HAL_Delay(APP_I2CVSESP32_INTER_FRAME_DELAY_MS);
+
     AppI2CvsESP32_BuildNormalSetting(s_tx_normal_frame, &payload->normal, counter);
     status = AppI2CvsESP32_Transmit(s_tx_normal_frame, APP_I2CVSESP32_NORMAL_FRAME_SIZE);
     if (status != HAL_OK)
     {
         return status;
     }
+
+    HAL_Delay(APP_I2CVSESP32_INTER_FRAME_DELAY_MS);
 
     AppI2CvsESP32_BuildPeakSetting(s_tx_peak_frame, &payload->peak, counter);
     status = AppI2CvsESP32_Transmit(s_tx_peak_frame, APP_I2CVSESP32_PEAK_FRAME_SIZE);

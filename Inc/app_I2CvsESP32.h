@@ -14,11 +14,27 @@ extern "C" {
 #define APP_I2CVSESP32_CMD_NORMAL_SETTING     0x02U
 #define APP_I2CVSESP32_CMD_PEAK_SETTING       0x03U
 
+/* Delay between frames when using AppI2CvsESP32_SendAll(). */
+#define APP_I2CVSESP32_INTER_FRAME_DELAY_MS   5U
+
 /*
  * Frame format: CMD + DATA + Counter + CRC8
  * No start/end bytes are used because I2C already transfers each frame as one transaction.
  * CRC8 is calculated from frame[0] to the byte before CRC8.
  */
+
+/*
+ * ControlFlags bit map, used in Frame 2 byte [1].
+ * bit0 = BlinkYel_ENA1
+ * bit1 = BlinkYel_ENA2
+ * bit2 = Thaco_Blink
+ * bit3 = CaoDiem_ENA
+ * bit4..bit7 = reserved
+ */
+#define APP_I2CVSESP32_FLAG_BLINK_YEL_ENA1    (1U << 0)
+#define APP_I2CVSESP32_FLAG_BLINK_YEL_ENA2    (1U << 1)
+#define APP_I2CVSESP32_FLAG_THACO_BLINK       (1U << 2)
+#define APP_I2CVSESP32_FLAG_CAO_DIEM_ENA      (1U << 3)
 
 /*
  * Frame 1 - REALTIME + BLINK YELLOW 1: 17 bytes
@@ -45,27 +61,32 @@ extern "C" {
 #define APP_I2CVSESP32_REALTIME_CRC_INDEX         16U
 
 /*
- * Frame 2 - NORMAL SETTING + BLINK YELLOW 2: 16 bytes
+ * Frame 2 - NORMAL SETTING + CONTROL FLAGS + BLINK YELLOW 2: 17 bytes
  * [0]  CMD = APP_I2CVSESP32_CMD_NORMAL_SETTING
- * [1]  X1
- * [2]  V1
- * [3]  GT1
- * [4]  X2
- * [5]  V2
- * [6]  GT2
- * [7]  X3
- * [8]  V3
- * [9]  GT3
- * [10] begin_hour2
- * [11] begin_min2
- * [12] end_hour2
- * [13] end_min2
- * [14] Counter
- * [15] CRC8 checksum of frame[0]..frame[14]
+ * [1]  ControlFlags
+ *      bit0 = BlinkYel_ENA1
+ *      bit1 = BlinkYel_ENA2
+ *      bit2 = Thaco_Blink
+ *      bit3 = CaoDiem_ENA
+ * [2]  X1
+ * [3]  V1
+ * [4]  GT1
+ * [5]  X2
+ * [6]  V2
+ * [7]  GT2
+ * [8]  X3
+ * [9]  V3
+ * [10] GT3
+ * [11] begin_hour2
+ * [12] begin_min2
+ * [13] end_hour2
+ * [14] end_min2
+ * [15] Counter
+ * [16] CRC8 checksum of frame[0]..frame[15]
  */
-#define APP_I2CVSESP32_NORMAL_FRAME_SIZE          16U
-#define APP_I2CVSESP32_NORMAL_COUNTER_INDEX       14U
-#define APP_I2CVSESP32_NORMAL_CRC_INDEX           15U
+#define APP_I2CVSESP32_NORMAL_FRAME_SIZE          17U
+#define APP_I2CVSESP32_NORMAL_COUNTER_INDEX       15U
+#define APP_I2CVSESP32_NORMAL_CRC_INDEX           16U
 
 /*
  * Frame 3 - PEAK SETTING: 16 bytes
@@ -90,7 +111,7 @@ extern "C" {
 #define APP_I2CVSESP32_PEAK_COUNTER_INDEX         14U
 #define APP_I2CVSESP32_PEAK_CRC_INDEX             15U
 
-#define APP_I2CVSESP32_MAX_FRAME_SIZE             APP_I2CVSESP32_REALTIME_FRAME_SIZE
+#define APP_I2CVSESP32_MAX_FRAME_SIZE             APP_I2CVSESP32_NORMAL_FRAME_SIZE
 
 typedef struct
 {
@@ -122,6 +143,8 @@ typedef struct
 
 typedef struct
 {
+    uint8_t control_flags;
+
     uint8_t x1;
     uint8_t v1;
     uint8_t gt1;
@@ -167,6 +190,11 @@ typedef struct
     AppI2CvsESP32_NormalPayload_t normal;
     AppI2CvsESP32_PeakPayload_t peak;
 } AppI2CvsESP32_Payload_t;
+
+uint8_t AppI2CvsESP32_MakeControlFlags(uint8_t blink_yel_ena1,
+                                        uint8_t blink_yel_ena2,
+                                        uint8_t thaco_blink,
+                                        uint8_t cao_diem_ena);
 
 void AppI2CvsESP32_Init(const AppI2CvsESP32_Config_t *config);
 void AppI2CvsESP32_SetCounter(uint8_t counter);
