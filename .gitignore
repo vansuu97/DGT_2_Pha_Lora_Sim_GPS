@@ -1,0 +1,62 @@
+# =========================
+# Build outputs
+# =========================
+
+MDK-ARM/Objects/
+MDK-ARM/Listings/
+Debug/
+Release/
+build/
+Build/
+
+*.o
+*.obj
+*.d
+*.dep
+*.elf
+*.axf
+*.hex
+*.bin
+*.map
+*.lst
+*.lnp
+*.htm
+*.crf
+*.iex
+*.sct.bak
+
+# =========================
+# Keil / IDE user-specific files
+# =========================
+
+*.uvguix.*
+*.uvgui.*
+*.uvoptx.bak
+*.uvprojx.bak
+*.user
+*.userosscache
+*.suo
+*.ncb
+*.opensdf
+*.sdf
+
+# =========================
+# STM32CubeIDE / Eclipse local files
+# =========================
+
+.metadata/
+.settings/
+.cproject
+.project
+.mxproject
+
+# =========================
+# OS / editor junk
+# =========================
+
+.DS_Store
+Thumbs.db
+desktop.ini
+*.swp
+*.tmp
+*.bak
