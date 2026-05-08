@@ -3,8 +3,19 @@
   * @file    app_DGT.c
   * @author  Suu Nguyen Van - FPT Company 0971346938
   * @version V1.0
-  * @date    05-05-2026
-  * @brief   Traffic light control application.
+  * @date    07-05-2026
+  * @brief   Traffic light control application for DGT 2-phase mode.
+  *
+  * @details This file implements the DGT traffic light state machine, including:
+  *          - Automatic operation mode.
+  *          - Manual operation mode.
+  *          - Yellow blink operation mode.
+  *          - Peak-time timing selection.
+  *          - RS485 register-bank update for output status.
+  *
+  *          Output status is organized by nested phase structure:
+  *          AppDGT2P_OutputStatus_t.phase1 / phase2 / phase3.
+  *          phase3 is reserved as a placeholder for future use.
   ******************************************************************************
   */
 
@@ -14,9 +25,9 @@
 #include "app_rs485.h"
 
 /* External configuration ----------------------------------------------------*/
-extern uint16_t X1, V1, GT1, D1;
-extern uint16_t X2, V2, GT2, D2;
-extern uint16_t X3, V3, GT3, D3;
+extern uint16_t X1, V1, GT1;
+extern uint16_t X2, V2, GT2;
+extern uint16_t X3, V3, GT3;
 
 extern uint16_t Xanh1, Vang1, GiaiToa1, Do1;
 extern uint16_t Xanh2, Vang2, GiaiToa2, Do2;
@@ -57,14 +68,17 @@ extern uint32_t Walk_count;
 /* Private types -------------------------------------------------------------*/
 typedef struct
 {
-    uint8_t d1;
-    uint8_t v1;
-    uint8_t x1;
-    uint8_t x2;
-    uint8_t v2;
-    uint8_t d2;
-} AppDGT2P_OutputStatus_t;
+    uint8_t red;   
+    uint8_t yellow;
+    uint8_t green; 
+} AppDGT2P_PhaseOutputStatus_t;
 
+typedef struct
+{
+    AppDGT2P_PhaseOutputStatus_t phase1;
+    AppDGT2P_PhaseOutputStatus_t phase2;
+    AppDGT2P_PhaseOutputStatus_t phase3;
+} AppDGT2P_OutputStatus_t;
 typedef struct
 {
     uint16_t x1;
@@ -186,19 +200,20 @@ static void AppDGT2P_UpdateRegBank(const AppDGT2P_OutputStatus_t *status)
 {
     uint16_t (*regbank)[APP_RS485_REG_PER_GROUP] = AppRs485_GetRegBank();
 
-    regbank[0][APP_DGT_REG_D1] = status->d1;
-    regbank[0][APP_DGT_REG_V1] = status->v1;
-    regbank[0][APP_DGT_REG_X1] = status->x1;
-    regbank[0][APP_DGT_REG_X2] = status->x2;
-    regbank[0][APP_DGT_REG_V2] = status->v2;
-    regbank[0][APP_DGT_REG_D2] = status->d2;
+    regbank[0][APP_DGT_REG_D1] = status->phase1.red;
+    regbank[0][APP_DGT_REG_V1] = status->phase1.yellow;
+    regbank[0][APP_DGT_REG_X1] = status->phase1.green;
+    regbank[0][APP_DGT_REG_X2] = status->phase2.green;
+    regbank[0][APP_DGT_REG_V2] = status->phase2.yellow;
+    regbank[0][APP_DGT_REG_D2] = status->phase2.red;
 }
 
 static void AppDGT2P_SetDirection1Green(void)
 {
     const AppDGT2P_OutputStatus_t status = {
-        .d1 = 1u, .v1 = 0u, .x1 = 0u,
-        .x2 = 0u, .v2 = 0u, .d2 = 1u,
+        .phase1 = { .red = 1u, .yellow = 0u, .green = 0u },
+        .phase2 = { .red = 1u, .yellow = 0u, .green = 0u },
+        .phase3 = { 0u },
     };
 
     D1_0; X1_1; V1_0;
@@ -211,8 +226,9 @@ static void AppDGT2P_SetDirection1Green(void)
 static void AppDGT2P_SetDirection1Yellow(uint8_t walkBlinkOn)
 {
     const AppDGT2P_OutputStatus_t status = {
-        .d1 = 0u, .v1 = 1u, .x1 = 0u,
-        .x2 = 0u, .v2 = 0u, .d2 = 1u,
+        .phase1 = { .red = 0u, .yellow = 1u, .green = 0u },
+        .phase2 = { .red = 1u, .yellow = 0u, .green = 0u },
+        .phase3 = { 0u },
     };
 
     D1_0; X1_0; V1_1;
@@ -233,8 +249,9 @@ static void AppDGT2P_SetDirection1Yellow(uint8_t walkBlinkOn)
 static void AppDGT2P_SetDirection1Clear(void)
 {
     const AppDGT2P_OutputStatus_t status = {
-        .d1 = 0u, .v1 = 0u, .x1 = 1u,
-        .x2 = 0u, .v2 = 0u, .d2 = 1u,
+        .phase1 = { .red = 0u, .yellow = 0u, .green = 1u },
+        .phase2 = { .red = 1u, .yellow = 0u, .green = 0u },
+        .phase3 = { 0u },
     };
 
     D1_1; X1_0; V1_0;
@@ -246,8 +263,9 @@ static void AppDGT2P_SetDirection1Clear(void)
 static void AppDGT2P_SetDirection2Green(void)
 {
     const AppDGT2P_OutputStatus_t status = {
-        .d1 = 0u, .v1 = 0u, .x1 = 1u,
-        .x2 = 1u, .v2 = 0u, .d2 = 0u,
+        .phase1 = { .red = 0u, .yellow = 0u, .green = 1u },
+        .phase2 = { .red = 0u, .yellow = 0u, .green = 1u },
+        .phase3 = { 0u },
     };
 
     D1_1; X1_0; V1_0;
@@ -260,8 +278,9 @@ static void AppDGT2P_SetDirection2Green(void)
 static void AppDGT2P_SetDirection2Yellow(uint8_t walkBlinkOn)
 {
     const AppDGT2P_OutputStatus_t status = {
-        .d1 = 0u, .v1 = 0u, .x1 = 1u,
-        .x2 = 0u, .v2 = 1u, .d2 = 0u,
+        .phase1 = { .red = 0u, .yellow = 0u, .green = 1u },
+        .phase2 = { .red = 0u, .yellow = 1u, .green = 0u },
+        .phase3 = { 0u },
     };
 
     D1_1; X1_0; V1_0;
@@ -282,8 +301,9 @@ static void AppDGT2P_SetDirection2Yellow(uint8_t walkBlinkOn)
 static void AppDGT2P_SetDirection2Clear(void)
 {
     const AppDGT2P_OutputStatus_t status = {
-        .d1 = 0u, .v1 = 0u, .x1 = 1u,
-        .x2 = 0u, .v2 = 0u, .d2 = 1u,
+        .phase1 = { .red = 0u, .yellow = 0u, .green = 1u },
+        .phase2 = { .red = 1u, .yellow = 0u, .green = 0u },
+        .phase3 = { 0u },
     };
 
     D1_1; X1_0; V1_0;
@@ -352,8 +372,8 @@ void AppDGT2P_BlinkYellow(void)
     {
         V1_1;
         V2_1;
-        status.v1 = 1u;
-        status.v2 = 1u;
+        status.phase1.yellow = 1u;
+        status.phase2.yellow = 1u;
     }
     else
     {

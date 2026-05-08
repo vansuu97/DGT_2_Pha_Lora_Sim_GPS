@@ -28,6 +28,7 @@
 #include "app_rs485.h"
 #include "app_DGT.h"
 #include "app_I2CvsESP32.h"
+#include "app_WeconHMI.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -56,6 +57,7 @@
 
 	#define TIME_2_5S_COUNT   25000u   // 2.5s / 0.1ms
 	#define TIME_5S_COUNT     50000u   // 5s / 0.1ms
+	#define TIME_10S_COUNT    100000u  // 10s / 0.1ms
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -89,16 +91,16 @@ uint8_t I2C_Count = 150;
     RTC_DateTypeDef getDate = {0};
 
 // DGT variables 
-	uint16_t input_ok = 0, ResetRTC_count = 0, HMI_initValue_count = 0;
-	uint16_t X1, V1, GT1, D1; 
-	uint16_t X2, V2, GT2, D2;
-	uint16_t X3, V3, GT3, D3;
-	uint16_t Xanh1=5, Vang1=3, GiaiToa1=2, Do1=22; 
-	uint16_t Xanh2=5, Vang2=3, GiaiToa2=2, Do2=22;
-	uint16_t Xanh3=5, Vang3=3, GiaiToa3=2, Do3=22;
-	uint16_t CaoDiem_X1=5, CaoDiem_V1=3, CaoDiem_GT1=2, CaoDiem_D1=22; 
-	uint16_t CaoDiem_X2=5, CaoDiem_V2=3, CaoDiem_GT2=2, CaoDiem_D2=22;
-	uint16_t CaoDiem_X3=5, CaoDiem_V3=3, CaoDiem_GT3=2, CaoDiem_D3=22;
+	uint16_t input_ok = 0, ResetRTC_count = 0;
+	uint16_t X1 = 0, V1 = 0, GT1 = 0, D1 = 0; 
+	uint16_t X2 = 0, V2 = 0, GT2 = 0, D2 = 0;
+	uint16_t X3 = 0, V3 = 0, GT3 = 0, D3 = 0;
+	uint16_t Xanh1 = 5, Vang1 = 3, GiaiToa1 = 2; 
+	uint16_t Xanh2 = 5, Vang2 = 3, GiaiToa2 = 2;
+	uint16_t Xanh3 = 5, Vang3 = 3, GiaiToa3 = 2;
+	uint16_t CaoDiem_X1 = 5, CaoDiem_V1 = 3, CaoDiem_GT1 = 2; 
+	uint16_t CaoDiem_X2 = 5, CaoDiem_V2 = 3, CaoDiem_GT2 = 2;
+	uint16_t CaoDiem_X3 = 5, CaoDiem_V3 = 3, CaoDiem_GT3 = 2;
 	volatile uint32_t t_count = 0, delay_count = 0;
 	uint32_t Total_Time = 0, CaoDiem_Total_Time, Dummy_1;
 	uint8_t BlinkYel_ENA1 = 1, BlinkYel_ENA2 = 0, Thaco_Blink = 0, CaoDiem_ENA;
@@ -173,22 +175,22 @@ static void Flash_WriteData(uint32_t start_addr, uint32_t *buffer, uint8_t lengt
 	HAL_FLASH_Lock();
 }
 static void LoadSettings_from_Flash(){
-		Xanh2			= (uint8_t) (myFlashData[0]      &0x000000ff);
-		GiaiToa1		= (uint8_t) (myFlashData[0] >>8  &0x000000ff);
-		Vang1			= (uint8_t) (myFlashData[0] >>16 &0x000000ff);
-		Xanh1			= (uint8_t) (myFlashData[0] >>24 &0x000000ff);
-		Vang3			= (uint8_t) (myFlashData[1]      &0x000000ff);
-		Xanh3			= (uint8_t) (myFlashData[1] >>8  &0x000000ff);
-		GiaiToa2		= (uint8_t) (myFlashData[1] >>16 &0x000000ff);
-		Vang2			= (uint8_t) (myFlashData[1] >>24 &0x000000ff);
-		end_hour1		= (uint8_t) (myFlashData[2]      &0x000000ff);
-		begin_min1		= (uint8_t) (myFlashData[2] >>8  &0x000000ff);
-		begin_hour1 	= (uint8_t) (myFlashData[2] >>16 &0x000000ff);
-		GT3 			= (uint8_t) (myFlashData[2] >>24 &0x000000ff);
-		Dummy_1			= (uint8_t) (myFlashData[3]      &0x000000ff);
-		Dummy_1			= (uint8_t) (myFlashData[3] >>8  &0x000000ff);
+		Xanh2			    = (uint8_t) (myFlashData[0]      &0x000000ff);
+		GiaiToa1		  = (uint8_t) (myFlashData[0] >>8  &0x000000ff);
+		Vang1			    = (uint8_t) (myFlashData[0] >>16 &0x000000ff);
+		Xanh1			    = (uint8_t) (myFlashData[0] >>24 &0x000000ff);
+		Vang3			    = (uint8_t) (myFlashData[1]      &0x000000ff);
+		Xanh3			    = (uint8_t) (myFlashData[1] >>8  &0x000000ff);
+		GiaiToa2		  = (uint8_t) (myFlashData[1] >>16 &0x000000ff);
+		Vang2			    = (uint8_t) (myFlashData[1] >>24 &0x000000ff);
+		end_hour1		  = (uint8_t) (myFlashData[2]      &0x000000ff);
+		begin_min1	  = (uint8_t) (myFlashData[2] >>8  &0x000000ff);
+		begin_hour1   = (uint8_t) (myFlashData[2] >>16 &0x000000ff);
+		GT3 			    = (uint8_t) (myFlashData[2] >>24 &0x000000ff);
+		Dummy_1			  = (uint8_t) (myFlashData[3]      &0x000000ff);
+		Dummy_1			  = (uint8_t) (myFlashData[3] >>8  &0x000000ff);
 		BlinkYel_ENA1	= (uint8_t) (myFlashData[3] >>16 &0x000000ff);
-		end_min1		= (uint8_t) (myFlashData[3] >>24 &0x000000ff);
+		end_min1		  = (uint8_t) (myFlashData[3] >>24 &0x000000ff);
 		// Cao diem
 		CaoDiem_X2  	= (uint8_t) (myFlashData[4]      &0x000000ff);
 		CaoDiem_GT1 	= (uint8_t) (myFlashData[4] >>8  &0x000000ff);
@@ -202,17 +204,17 @@ static void LoadSettings_from_Flash(){
 		begin_min3  	= (uint8_t) (myFlashData[6] >>8  &0x000000ff);
 		begin_hour3 	= (uint8_t) (myFlashData[6] >>16 &0x000000ff);
 		CaoDiem_GT3 	= (uint8_t) (myFlashData[6] >>24 &0x000000ff);
-		Dummy_1			= (uint8_t) (myFlashData[7]      &0x000000ff);
-		Dummy_1			= (uint8_t) (myFlashData[7] >>8  &0x000000ff);
+		Dummy_1			  = (uint8_t) (myFlashData[7]      &0x000000ff);
+		Dummy_1			  = (uint8_t) (myFlashData[7] >>8  &0x000000ff);
 		CaoDiem_ENA 	= (uint8_t) (myFlashData[7] >>16 &0x000000ff);
-		end_min3 		= (uint8_t) (myFlashData[7] >>24 &0x000000ff);
-		end_min2		= (uint8_t) (myFlashData[8]      &0x000000ff);
-		end_hour2		= (uint8_t) (myFlashData[8] >>8  &0x000000ff);
+		end_min3 		  = (uint8_t) (myFlashData[7] >>24 &0x000000ff);
+		end_min2		  = (uint8_t) (myFlashData[8]      &0x000000ff);
+		end_hour2		  = (uint8_t) (myFlashData[8] >>8  &0x000000ff);
 		begin_min2		= (uint8_t) (myFlashData[8] >>16 &0x000000ff);
 		begin_hour2		= (uint8_t) (myFlashData[8] >>24 &0x000000ff);
 		Thaco_Blink		= (uint8_t) (myFlashData[9]      &0x000000ff);
-		Dummy_1			= (uint8_t) (myFlashData[9] >>8  &0x000000ff);
-		Dummy_1			= (uint8_t) (myFlashData[9] >>16 &0x000000ff);
+		Dummy_1			  = (uint8_t) (myFlashData[9] >>8  &0x000000ff);
+		Dummy_1			  = (uint8_t) (myFlashData[9] >>16 &0x000000ff);
 		BlinkYel_ENA2	= (uint8_t) (myFlashData[9] >>24 &0x000000ff);
 		
 }
@@ -821,29 +823,6 @@ static void I2C_SendFrame(void)
     (void)AppI2CvsESP32_SendAll(&payload);
 }
 
-static void RTC_SetDateTime(void){ // SET RTC
-    /* Set Time: 14:25:30 */
-    setTime.Hours = 14;
-    setTime.Minutes = 25;
-    setTime.Seconds = 30;
-    setTime.DayLightSaving = RTC_DAYLIGHTSAVING_NONE;
-    setTime.StoreOperation = RTC_STOREOPERATION_RESET;
-	HAL_RTC_SetTime(&hrtc, &setTime, RTC_FORMAT_BIN);
-
-    /* Set Date: Monday, 15/04/2026 */
-    setDate.WeekDay = RTC_WEEKDAY_MONDAY;
-    setDate.Month   = RTC_MONTH_APRIL;
-    setDate.Date    = 13;
-    setDate.Year    = 26;   // chỉ lưu 2 số cuối: 2026 -> 26
-	HAL_RTC_SetDate(&hrtc, &setDate, RTC_FORMAT_BIN);
-	
-	HAL_RTCEx_BKUPWrite(&hrtc, RTC_BKP_DR1, 0x12);
-}
-
-static void RTC_GetDateTime(void){ // Read RTC
-    HAL_RTC_GetTime(&hrtc, &getTime, RTC_FORMAT_BIN);
-    HAL_RTC_GetDate(&hrtc, &getDate, RTC_FORMAT_BIN);
-}
 static uint8_t Check_Time_Event(uint32_t period_count, uint32_t *time_prev){
     uint32_t time_now = delay_count;
 
@@ -856,17 +835,8 @@ static uint8_t Check_Time_Event(uint32_t period_count, uint32_t *time_prev){
     return 0u;
 }
 
-static uint8_t Check_2_5s_Event(void){
-    static uint32_t time_prev = 0u;
 
-    return Check_Time_Event(TIME_2_5S_COUNT, &time_prev);
-}
 
-static uint8_t Check_5s_Event(void){
-    static uint32_t time_prev = 0u;
-
-    return Check_Time_Event(TIME_5S_COUNT, &time_prev);
-}
 /* USER CODE END 4 */
 
 /* USER CODE BEGIN Header_StartMainTask */
@@ -879,7 +849,7 @@ static uint8_t Check_5s_Event(void){
 void StartMainTask(void const * argument)
 {
   /* USER CODE BEGIN 5 */
-	static uint8_t blink_state = 0u;
+
   /* Infinite loop */
   for(;;)
   {
@@ -912,8 +882,8 @@ void StartMainTask(void const * argument)
 void StartConnectivityTask(void const * argument)
 {
   /* USER CODE BEGIN StartConnectivityTask */
-	uint16_t (*RS485_regbank)[APP_RS485_REG_PER_GROUP] = AppRs485_GetRegBank();
-
+	uint16_t (*RS485_regbank)[APP_RS485_REG_PER_GROUP] = AppRs485_GetRegBank(); // from app_rs485.c: s_regbank[APP_RS485_REG_GROUPS][APP_RS485_REG_PER_GROUP];
+  static uint32_t time_prev_10s = 0u;
   /* Infinite loop */
   for(;;)
   {
@@ -925,57 +895,14 @@ void StartConnectivityTask(void const * argument)
   min_realTime  = (uint16_t)getTime.Minutes;
   hour_realTime = (uint16_t)getTime.Hours;
 	
-	if (Check_5s_Event()){ // I2C_SendFrame each 5s
+	if (Check_Time_Event(TIME_10S_COUNT, &time_prev_10s)){ // I2C_SendFrame each 10s
 		I2C_SendFrame();
     }
 	
 	//////////////////////////////////////////////////////////////
 	AppRs485_Task();
+	AppWeconHMI_InitValues(RS485_regbank);
 	//////////////////////////////////////////////////////////////
-	
-	if (HMI_initValue_count<=1200){// Init value to HMI
-		HMI_initValue_count++;
-		//////
-		RS485_regbank[2][120] = Xanh1;		// xanh 1
-		RS485_regbank[2][121] = Vang1;		// vang 1
-		RS485_regbank[2][122] = GiaiToa1;	// giai toa 1			
-		RS485_regbank[2][123] = Xanh2;		// xanh 2 
-		RS485_regbank[2][124] = Vang2;		// vang 2
-		RS485_regbank[2][125] = GiaiToa2;	// giai toa 2				
-		// RS485_regbank[2][142] = Xanh3 ;	// xanh 3
-		// RS485_regbank[2][143] = Vang3 ;	// vang 3
-		// RS485_regbank[2][144] = GiaiToa3;// giai toa 3
-		RS485_regbank[2][126] = begin_hour1;
-		RS485_regbank[2][127] = begin_min1;
-		RS485_regbank[2][140] = end_hour1;
-		RS485_regbank[2][141] = end_min1;
-		RS485_regbank[0][30]  = BlinkYel_ENA1;
-		Total_Time = X1 + V1 + GT1 + GT2;
-		//////
-		RS485_regbank[2][75] = CaoDiem_X1 ;	// xanh 1
-		RS485_regbank[2][76] = CaoDiem_V1 ;	// vang 1
-		RS485_regbank[2][77] = CaoDiem_GT1;	// giai toa 1			
-		RS485_regbank[2][78] = CaoDiem_X2 ;	// xanh 2 
-		RS485_regbank[2][79] = CaoDiem_V2 ;	// vang 2
-		RS485_regbank[2][80] = CaoDiem_GT2;	// giai toa 2			
-		// RS485_regbank[2][200] = CaoDiem_X3 ;// xanh 3
-		// RS485_regbank[2][201] = CaoDiem_V3 ;// vang 3
-		// RS485_regbank[2][202] = CaoDiem_GT3;// giai toa 3
-		RS485_regbank[2][81] = begin_hour3 ;
-		RS485_regbank[2][82] = begin_min3	;
-		RS485_regbank[2][90] = end_hour3	;
-		RS485_regbank[2][91] = end_min3	;
-		RS485_regbank[0][31] = CaoDiem_ENA ;
-		CaoDiem_Total_Time = CaoDiem_X2 + CaoDiem_V2 + CaoDiem_GT1 + CaoDiem_GT2;
-		//////
-		RS485_regbank[2][203] = begin_hour2;
-		RS485_regbank[2][204] = begin_min2;
-		RS485_regbank[2][205] = end_hour2;
-		RS485_regbank[2][206] = end_min2;
-		RS485_regbank[0][32]  = BlinkYel_ENA2;
-		//////
-		RS485_regbank[0][34] = Thaco_Blink;
-	}
 	
 	input_ok++;
 	if (input_ok >=800){// reset thong bao nhap thoi gian ok
@@ -983,48 +910,41 @@ void StartConnectivityTask(void const * argument)
 		input_ok=0;
 	}
 	
-	if (ResetRTC_count <= 60000) ResetRTC_count++;
-	if ((RS485_regbank[0][97] == 1) && (ResetRTC_count == 0xFFFF)) ResetRTC_count = 0;
-	if ((ResetRTC_count >= 59000) && (ResetRTC_count <= 60000)) {// reset input RTC variables after 1 minute, check HMI background script
+	if (ResetRTC_count <= 6000) ResetRTC_count++;
+	if ((RS485_regbank[0][AppWeconHMI_BIT_getTime_HMI] == 1) && (ResetRTC_count == 0xFFFF)) ResetRTC_count = 0;
+	if ((ResetRTC_count >= 5900) && (ResetRTC_count <= 6000)) {// reset input RTC variables after 1 minute, check HMI background script
 		ResetRTC_count = 0xFFFF;
-		RS485_regbank[2][58] = 0;
-		RS485_regbank[2][59] = 0;
-		RS485_regbank[2][70] = 0;
-		RS485_regbank[2][71] = 0;
-		RS485_regbank[2][72] = 0;
-		RS485_regbank[2][73] = 0;
-		RS485_regbank[2][74] = 0;
-		RS485_regbank[0][97] = 0;
+		AppWeconHMI_reset_input_RTC_vars(RS485_regbank);
 	}
 			
 // send Real time from RTC to HMI	
-	RS485_regbank[2][52] = getTime.Hours;
-	RS485_regbank[2][53] = getTime.Minutes;
-	RS485_regbank[2][54] = getTime.Seconds;
-	RS485_regbank[2][55] = getDate.Date;
-	RS485_regbank[2][56] = getDate.Month;
-	RS485_regbank[2][57] = getDate.Year;
+	RS485_regbank[2][AppWeconHMI_REG_view_Hours]    = getTime.Hours;
+	RS485_regbank[2][AppWeconHMI_REG_view_Minutes]  = getTime.Minutes;
+	RS485_regbank[2][AppWeconHMI_REG_view_Seconds]  = getTime.Seconds;
+	RS485_regbank[2][AppWeconHMI_REG_view_Date]     = getDate.Date;
+	RS485_regbank[2][AppWeconHMI_REG_view_Month]    = getDate.Month;
+	RS485_regbank[2][AppWeconHMI_REG_view_Year]     = getDate.Year;
 	
-	if (RS485_regbank[0][96] == 1){////// SET time to RTC
-		setTime.Hours 	= RS485_regbank[2][58];
-		setTime.Minutes = RS485_regbank[2][59];
-		setTime.Seconds = RS485_regbank[2][70];
+	if (RS485_regbank[0][AppWeconHMI_BIT_SET_TIME_RTC] == 1){////// SET time to RTC
+		setTime.Hours 	= RS485_regbank[2][AppWeconHMI_REG_setTime_Hours];
+		setTime.Minutes = RS485_regbank[2][AppWeconHMI_REG_setTime_Minutes];
+		setTime.Seconds = RS485_regbank[2][AppWeconHMI_REG_setTime_Seconds];
 		setTime.DayLightSaving = RTC_DAYLIGHTSAVING_NONE;
 		setTime.StoreOperation = RTC_STOREOPERATION_RESET;
 		HAL_RTC_SetTime(&hrtc, &setTime, RTC_FORMAT_BIN);
 		
-		if (RS485_regbank[2][74]>1) setDate.WeekDay = RS485_regbank[2][74]-1;
-		if (RS485_regbank[2][74]==1) setDate.WeekDay = RTC_WEEKDAY_SUNDAY;
+		if (RS485_regbank[2][AppWeconHMI_REG_setDate_WeekDay]>1) setDate.WeekDay = RS485_regbank[2][AppWeconHMI_REG_setDate_WeekDay]-1;
+		if (RS485_regbank[2][AppWeconHMI_REG_setDate_WeekDay]==1) setDate.WeekDay = RTC_WEEKDAY_SUNDAY;
 		
-		setDate.Month= RS485_regbank[2][72];
-		setDate.Date = RS485_regbank[2][71];
-		setDate.Year = RS485_regbank[2][73];   // chỉ lưu 2 số cuối: 2026 -> 26
+		setDate.Month= RS485_regbank[2][AppWeconHMI_REG_setDate_Month];
+		setDate.Date = RS485_regbank[2][AppWeconHMI_REG_setDate_Date];
+		setDate.Year = RS485_regbank[2][AppWeconHMI_REG_setDate_Year];   // chỉ lưu 2 số cuối: 2026 -> 26
 		HAL_RTC_SetDate(&hrtc, &setDate, RTC_FORMAT_BIN);
 		
 		HAL_RTCEx_BKUPWrite(&hrtc, RTC_BKP_DR1, 0x12);
 		// inform input_ok
-		RS485_regbank[0][96] = 0;
-		RS485_regbank[0][11] = 1;
+		RS485_regbank[0][AppWeconHMI_BIT_SET_TIME_RTC] = 0;
+		RS485_regbank[0][AppWeconHMI_BIT_inputOk]     = 1;
 		input_ok = 0;
 		ResetRTC_count = 0;
 	}
@@ -1170,59 +1090,7 @@ void StartConnectivityTask(void const * argument)
 		RS485_regbank[0][11] = 1;
 		input_ok = 0;
 	}
-	
-	/*
-	// RS485_regbank[2][58] = getTime.Seconds;
-	// RS485_regbank[2][59] = getTime.Seconds;
-	// RS485_regbank[2][70] = getTime.Seconds;
-	// RS485_regbank[2][71] = getTime.Seconds;
-	// RS485_regbank[2][72] = getTime.Seconds;
-	// RS485_regbank[2][73] = getTime.Seconds;
-	// RS485_regbank[2][74] = getTime.Seconds;
-	// RS485_regbank[2][75] = getTime.Seconds;
-	// RS485_regbank[2][76] = getTime.Seconds;
-	// RS485_regbank[2][77] = getTime.Seconds;
-	// RS485_regbank[2][78] = getTime.Seconds;
-	// RS485_regbank[2][79] = getTime.Seconds;
-	// RS485_regbank[2][80] = getTime.Seconds;
-	// RS485_regbank[2][81] = getTime.Seconds;
-	// RS485_regbank[2][82] = getTime.Seconds;
-	// RS485_regbank[2][90] = getTime.Seconds;
-	// RS485_regbank[2][91] = getTime.Seconds;
-	// RS485_regbank[2][92] = getTime.Seconds;
-	// RS485_regbank[2][93] = getTime.Seconds;
-	// RS485_regbank[2][94] = getTime.Seconds;
-	// RS485_regbank[2][120] = getTime.Seconds;
-	// RS485_regbank[2][121] = getTime.Seconds;
-	// RS485_regbank[2][122] = getTime.Seconds;
-	// RS485_regbank[2][123] = getTime.Seconds;
-	// RS485_regbank[2][124] = getTime.Seconds;
-	// RS485_regbank[2][125] = getTime.Seconds;
-	// RS485_regbank[2][126] = getTime.Seconds;
-	// RS485_regbank[2][127] = getTime.Seconds;
-	// RS485_regbank[2][140] = getTime.Seconds;
-	// RS485_regbank[2][141] = getTime.Seconds;
-	// RS485_regbank[2][142] = getTime.Seconds;
-	// RS485_regbank[2][143] = getTime.Seconds;
-	// RS485_regbank[2][144] = getTime.Seconds;
-	// RS485_regbank[2][203] = getTime.Seconds;
-	// RS485_regbank[2][204] = getTime.Seconds;
-	// RS485_regbank[2][205] = getTime.Seconds;
-	// RS485_regbank[2][206] = getTime.Seconds;
-	
-	// if (RS485_regbank[0][94] == 1) RS485_regbank[0][94] = 0; //Setting 1
-	// if (RS485_regbank[0][96] == 1) RS485_regbank[0][96] = 0;
-	// if (RS485_regbank[0][97] == 1) RS485_regbank[0][97] = 0;
-	// if (RS485_regbank[0][98] == 1) RS485_regbank[0][98] = 0;  // Setting_2
-	// if (RS485_regbank[0][99] == 1) RS485_regbank[0][99] = 0;  // Thaco_Blink
-	// if (RS485_regbank[0][30] == 1) RS485_regbank[0][30] = 0;
-	// if (RS485_regbank[0][31] == 1) RS485_regbank[0][31] = 0;
-	// if (RS485_regbank[0][32] == 1) RS485_regbank[0][32] = 0; // ChopVang_ENA_2
-	// if (RS485_regbank[0][34] == 1) RS485_regbank[0][34] = 0; // Thaco_Blink
-	// if (RS485_regbank[0][95] == 1) RS485_regbank[0][95] = 0; // Thaco_Blink
-	*/
-	
-	
+
     osDelay(10);
   }
   /* USER CODE END StartConnectivityTask */

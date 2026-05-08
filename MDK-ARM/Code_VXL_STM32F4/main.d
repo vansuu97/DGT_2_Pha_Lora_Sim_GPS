@@ -57,3 +57,4 @@
 .\code_vxl_stm32f4\main.o: ../Inc/app_rs485.h
 .\code_vxl_stm32f4\main.o: ../Inc/app_DGT.h
 .\code_vxl_stm32f4\main.o: ../Inc/app_I2CvsESP32.h
+.\code_vxl_stm32f4\main.o: ../Inc/app_WeconHMI.h

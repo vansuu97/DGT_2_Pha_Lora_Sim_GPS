@@ -490,6 +490,11 @@
               <FileType>1</FileType>
               <FilePath>..\Src\app_I2CvsESP32.c</FilePath>
             </File>
+            <File>
+              <FileName>app_WeconHMI.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\Src\app_WeconHMI.c</FilePath>
+            </File>
           </Files>
         </Group>
         <Group>
