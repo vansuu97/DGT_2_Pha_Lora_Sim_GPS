@@ -29,6 +29,7 @@
 #include "app_DGT.h"
 #include "app_I2CvsESP32.h"
 #include "app_WeconHMI.h"
+#include "app_flash.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -38,19 +39,6 @@
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
-	#define ESP32_ADDR 0x12
-	#define HMI_ID 10	// ID for HMI RS485 deceive
-	#define FLASH_ADD0   0x08020080
-	#define FLASH_ADD1   0x08020084
-	#define FLASH_ADD2   0x08020088
-	#define FLASH_ADD3   0x0802008C
-	#define FLASH_ADD4   0x08020090
-	#define FLASH_ADD5   0x08020094
-	#define FLASH_ADD6   0x08020098
-	#define FLASH_ADD7   0x0802009C
-	#define FLASH_ADD8   0x080200A0
-	#define FLASH_ADD9	 0x080200A4
-	
 	#define I2C_FRAME_SIZE 22U
 	#define I2C_FRAME_START '{'
 	#define I2C_FRAME_END   '}'
@@ -127,8 +115,8 @@ uint8_t I2C_Count = 150;
 static volatile uint8_t tim7_1ms_div = 0u;
 uint8_t I1_F, I2_F, I3_F, I4_F, I5_F;
 
-// Flash ROM variables
-uint32_t myFlashData[10] = {0}; //24 
+// Flash app variables
+AppFlash_Settings_t flash_settings = {0};
 	
 
 /* USER CODE END PV */
@@ -150,73 +138,98 @@ void StartConnectivityTask(void const * argument);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
-uint32_t Read_Flash(uint32_t Data_adr)
-	{
-		return (*(__IO uint32_t *)Data_adr);
-	}
-void Write_Flash(uint32_t adr_Flash, uint32_t adr_Data)
-	{
-		HAL_FLASH_Program(FLASH_TYPEPROGRAM_WORD,adr_Flash ,adr_Data);	
-	}
+static void Main_ApplyFlashSettings(const AppFlash_Settings_t *s)
+{
+    if (s == NULL)
+    {
+        return;
+    }
 
-static void Flash_GetData(uint32_t start_addr, uint32_t *buffer, uint8_t length){ // Read data to flash memory
-    for (uint8_t i = 0; i < length; i++)
-    {
-        buffer[i] = Read_Flash(start_addr + i * 4);
-    }
+    Xanh1 = s->Xanh1;
+    Vang1 = s->Vang1;
+    GiaiToa1 = s->GiaiToa1;
+    Xanh2 = s->Xanh2;
+    Vang2 = s->Vang2;
+    GiaiToa2 = s->GiaiToa2;
+    Xanh3 = s->Xanh3;
+    Vang3 = s->Vang3;
+    GT3 = s->GT3;
+
+    begin_hour1 = s->begin_hour1;
+    begin_min1 = s->begin_min1;
+    end_hour1 = s->end_hour1;
+    end_min1 = s->end_min1;
+    BlinkYel_ENA1 = s->BlinkYel_ENA1;
+
+    CaoDiem_X1 = s->CaoDiem_X1;
+    CaoDiem_V1 = s->CaoDiem_V1;
+    CaoDiem_GT1 = s->CaoDiem_GT1;
+    CaoDiem_X2 = s->CaoDiem_X2;
+    CaoDiem_V2 = s->CaoDiem_V2;
+    CaoDiem_GT2 = s->CaoDiem_GT2;
+    CaoDiem_X3 = s->CaoDiem_X3;
+    CaoDiem_V3 = s->CaoDiem_V3;
+    CaoDiem_GT3 = s->CaoDiem_GT3;
+
+    begin_hour3 = s->begin_hour3;
+    begin_min3 = s->begin_min3;
+    end_hour3 = s->end_hour3;
+    end_min3 = s->end_min3;
+    CaoDiem_ENA = s->CaoDiem_ENA;
+
+    begin_hour2 = s->begin_hour2;
+    begin_min2 = s->begin_min2;
+    end_hour2 = s->end_hour2;
+    end_min2 = s->end_min2;
+    BlinkYel_ENA2 = s->BlinkYel_ENA2;
+    Thaco_Blink = s->Thaco_Blink;
 }
-static void Flash_WriteData(uint32_t start_addr, uint32_t *buffer, uint8_t length){ // Write data to flash memory
-    HAL_FLASH_Unlock();
-	FLASH_Erase_Sector(FLASH_SECTOR_5, FLASH_VOLTAGE_RANGE_3);
-	for (uint8_t i = 0; i < length; i++)
+
+static void Main_GetCurrentFlashSettings(AppFlash_Settings_t *s)
+{
+    if (s == NULL)
     {
-        Write_Flash((start_addr + i * 4), buffer[i]);
+        return;
     }
-	HAL_FLASH_Lock();
-}
-static void LoadSettings_from_Flash(){
-		Xanh2			    = (uint8_t) (myFlashData[0]      &0x000000ff);
-		GiaiToa1		  = (uint8_t) (myFlashData[0] >>8  &0x000000ff);
-		Vang1			    = (uint8_t) (myFlashData[0] >>16 &0x000000ff);
-		Xanh1			    = (uint8_t) (myFlashData[0] >>24 &0x000000ff);
-		Vang3			    = (uint8_t) (myFlashData[1]      &0x000000ff);
-		Xanh3			    = (uint8_t) (myFlashData[1] >>8  &0x000000ff);
-		GiaiToa2		  = (uint8_t) (myFlashData[1] >>16 &0x000000ff);
-		Vang2			    = (uint8_t) (myFlashData[1] >>24 &0x000000ff);
-		end_hour1		  = (uint8_t) (myFlashData[2]      &0x000000ff);
-		begin_min1	  = (uint8_t) (myFlashData[2] >>8  &0x000000ff);
-		begin_hour1   = (uint8_t) (myFlashData[2] >>16 &0x000000ff);
-		GT3 			    = (uint8_t) (myFlashData[2] >>24 &0x000000ff);
-		Dummy_1			  = (uint8_t) (myFlashData[3]      &0x000000ff);
-		Dummy_1			  = (uint8_t) (myFlashData[3] >>8  &0x000000ff);
-		BlinkYel_ENA1	= (uint8_t) (myFlashData[3] >>16 &0x000000ff);
-		end_min1		  = (uint8_t) (myFlashData[3] >>24 &0x000000ff);
-		// Cao diem
-		CaoDiem_X2  	= (uint8_t) (myFlashData[4]      &0x000000ff);
-		CaoDiem_GT1 	= (uint8_t) (myFlashData[4] >>8  &0x000000ff);
-		CaoDiem_V1  	= (uint8_t) (myFlashData[4] >>16 &0x000000ff);
-		CaoDiem_X1  	= (uint8_t) (myFlashData[4] >>24 &0x000000ff);
-		CaoDiem_V3  	= (uint8_t) (myFlashData[5]      &0x000000ff);
-		CaoDiem_X3  	= (uint8_t) (myFlashData[5] >>8  &0x000000ff);
-		CaoDiem_GT2 	= (uint8_t) (myFlashData[5] >>16 &0x000000ff);
-		CaoDiem_V2  	= (uint8_t) (myFlashData[5] >>24 &0x000000ff);
-		end_hour3   	= (uint8_t) (myFlashData[6]      &0x000000ff);
-		begin_min3  	= (uint8_t) (myFlashData[6] >>8  &0x000000ff);
-		begin_hour3 	= (uint8_t) (myFlashData[6] >>16 &0x000000ff);
-		CaoDiem_GT3 	= (uint8_t) (myFlashData[6] >>24 &0x000000ff);
-		Dummy_1			  = (uint8_t) (myFlashData[7]      &0x000000ff);
-		Dummy_1			  = (uint8_t) (myFlashData[7] >>8  &0x000000ff);
-		CaoDiem_ENA 	= (uint8_t) (myFlashData[7] >>16 &0x000000ff);
-		end_min3 		  = (uint8_t) (myFlashData[7] >>24 &0x000000ff);
-		end_min2		  = (uint8_t) (myFlashData[8]      &0x000000ff);
-		end_hour2		  = (uint8_t) (myFlashData[8] >>8  &0x000000ff);
-		begin_min2		= (uint8_t) (myFlashData[8] >>16 &0x000000ff);
-		begin_hour2		= (uint8_t) (myFlashData[8] >>24 &0x000000ff);
-		Thaco_Blink		= (uint8_t) (myFlashData[9]      &0x000000ff);
-		Dummy_1			  = (uint8_t) (myFlashData[9] >>8  &0x000000ff);
-		Dummy_1			  = (uint8_t) (myFlashData[9] >>16 &0x000000ff);
-		BlinkYel_ENA2	= (uint8_t) (myFlashData[9] >>24 &0x000000ff);
-		
+
+    s->Xanh1 = (uint8_t)Xanh1;
+    s->Vang1 = (uint8_t)Vang1;
+    s->GiaiToa1 = (uint8_t)GiaiToa1;
+    s->Xanh2 = (uint8_t)Xanh2;
+    s->Vang2 = (uint8_t)Vang2;
+    s->GiaiToa2 = (uint8_t)GiaiToa2;
+    s->Xanh3 = (uint8_t)Xanh3;
+    s->Vang3 = (uint8_t)Vang3;
+    s->GT3 = (uint8_t)GT3;
+
+    s->begin_hour1 = begin_hour1;
+    s->begin_min1 = begin_min1;
+    s->end_hour1 = end_hour1;
+    s->end_min1 = end_min1;
+    s->BlinkYel_ENA1 = BlinkYel_ENA1;
+
+    s->CaoDiem_X1 = (uint8_t)CaoDiem_X1;
+    s->CaoDiem_V1 = (uint8_t)CaoDiem_V1;
+    s->CaoDiem_GT1 = (uint8_t)CaoDiem_GT1;
+    s->CaoDiem_X2 = (uint8_t)CaoDiem_X2;
+    s->CaoDiem_V2 = (uint8_t)CaoDiem_V2;
+    s->CaoDiem_GT2 = (uint8_t)CaoDiem_GT2;
+    s->CaoDiem_X3 = (uint8_t)CaoDiem_X3;
+    s->CaoDiem_V3 = (uint8_t)CaoDiem_V3;
+    s->CaoDiem_GT3 = (uint8_t)CaoDiem_GT3;
+
+    s->begin_hour3 = begin_hour3;
+    s->begin_min3 = begin_min3;
+    s->end_hour3 = end_hour3;
+    s->end_min3 = end_min3;
+    s->CaoDiem_ENA = CaoDiem_ENA;
+
+    s->begin_hour2 = begin_hour2;
+    s->begin_min2 = begin_min2;
+    s->end_hour2 = end_hour2;
+    s->end_min2 = end_min2;
+    s->BlinkYel_ENA2 = BlinkYel_ENA2;
+    s->Thaco_Blink = Thaco_Blink;
 }
 
 /* USER CODE END 0 */
@@ -260,30 +273,34 @@ int main(void)
 	HAL_TIM_Base_Start_IT(&htim7);
 	HAL_DAC_Start(&hdac, DAC_CHANNEL_1);
 	HAL_DAC_Start(&hdac, DAC_CHANNEL_2);
-	// RS485
+
+	// Read settings from Flash app
+	if (AppFlash_LoadSettings(&flash_settings) == HAL_OK)
+	{
+		Main_ApplyFlashSettings(&flash_settings);
+	}
+	HAL_Delay(1);
+  
+	// App init
+	AppDigitalInput_Init();
 	AppRs485_Config_t rs485_cfg = {
 		.huart    = &huart3,
 		.dir_port = RS485_DIR_GPIO_Port,
 		.dir_pin  = RS485_DIR_Pin,
-		.slave_id = HMI_ID,
+		.slave_id = APP_RS485_HMI_ID,
 	};
-  // I2c
+	AppRs485_Init(&rs485_cfg);
+
   AppI2CvsESP32_Config_t i2c_esp32_cfg = {
     .hi2c = &hi2c1,
     .slave_addr_7bit = APP_I2CVSESP32_ADDR_7BIT,
     .timeout_ms = 100U,
-};
-	// Read from flash
-	Flash_GetData(FLASH_ADD0, &myFlashData[0], 10);
-	LoadSettings_from_Flash();
-	HAL_Delay(10);
+  };
+  AppI2CvsESP32_Init(&i2c_esp32_cfg);
+
 	// Ethernet
 	ETH_PWR_0;
-	// App
-	AppDigitalInput_Init();
-	AppRs485_Init(&rs485_cfg);
-  AppI2CvsESP32_Init(&i2c_esp32_cfg);
-	
+
   /* USER CODE END 2 */
 
   /* USER CODE BEGIN RTOS_MUTEX */
@@ -906,7 +923,7 @@ void StartConnectivityTask(void const * argument)
 	
 	input_ok++;
 	if (input_ok >=800){// reset thong bao nhap thoi gian ok
-		RS485_regbank[0][11]=0;
+		RS485_regbank[0][AppWeconHMI_BIT_inputOk]=0;
 		input_ok=0;
 	}
 	
@@ -914,89 +931,45 @@ void StartConnectivityTask(void const * argument)
 	if ((RS485_regbank[0][AppWeconHMI_BIT_getTime_HMI] == 1) && (ResetRTC_count == 0xFFFF)) ResetRTC_count = 0;
 	if ((ResetRTC_count >= 5900) && (ResetRTC_count <= 6000)) {// reset input RTC variables after 1 minute, check HMI background script
 		ResetRTC_count = 0xFFFF;
-		AppWeconHMI_reset_input_RTC_vars(RS485_regbank);
+		AppWeconHMI_resetInputRTCVars(RS485_regbank);
 	}
 			
 // send Real time from RTC to HMI	
-	RS485_regbank[2][AppWeconHMI_REG_view_Hours]    = getTime.Hours;
-	RS485_regbank[2][AppWeconHMI_REG_view_Minutes]  = getTime.Minutes;
-	RS485_regbank[2][AppWeconHMI_REG_view_Seconds]  = getTime.Seconds;
-	RS485_regbank[2][AppWeconHMI_REG_view_Date]     = getDate.Date;
-	RS485_regbank[2][AppWeconHMI_REG_view_Month]    = getDate.Month;
-	RS485_regbank[2][AppWeconHMI_REG_view_Year]     = getDate.Year;
+	AppWeconHMI_sendRTCtoHMI(RS485_regbank, getTime, getDate);
 	
 	if (RS485_regbank[0][AppWeconHMI_BIT_SET_TIME_RTC] == 1){////// SET time to RTC
-		setTime.Hours 	= RS485_regbank[2][AppWeconHMI_REG_setTime_Hours];
-		setTime.Minutes = RS485_regbank[2][AppWeconHMI_REG_setTime_Minutes];
-		setTime.Seconds = RS485_regbank[2][AppWeconHMI_REG_setTime_Seconds];
-		setTime.DayLightSaving = RTC_DAYLIGHTSAVING_NONE;
-		setTime.StoreOperation = RTC_STOREOPERATION_RESET;
-		HAL_RTC_SetTime(&hrtc, &setTime, RTC_FORMAT_BIN);
-		
-		if (RS485_regbank[2][AppWeconHMI_REG_setDate_WeekDay]>1) setDate.WeekDay = RS485_regbank[2][AppWeconHMI_REG_setDate_WeekDay]-1;
-		if (RS485_regbank[2][AppWeconHMI_REG_setDate_WeekDay]==1) setDate.WeekDay = RTC_WEEKDAY_SUNDAY;
-		
-		setDate.Month= RS485_regbank[2][AppWeconHMI_REG_setDate_Month];
-		setDate.Date = RS485_regbank[2][AppWeconHMI_REG_setDate_Date];
-		setDate.Year = RS485_regbank[2][AppWeconHMI_REG_setDate_Year];   // chỉ lưu 2 số cuối: 2026 -> 26
-		HAL_RTC_SetDate(&hrtc, &setDate, RTC_FORMAT_BIN);
-		
-		HAL_RTCEx_BKUPWrite(&hrtc, RTC_BKP_DR1, 0x12);
-		// inform input_ok
-		RS485_regbank[0][AppWeconHMI_BIT_SET_TIME_RTC] = 0;
-		RS485_regbank[0][AppWeconHMI_BIT_inputOk]     = 1;
-		input_ok = 0;
-		ResetRTC_count = 0;
+		AppWeconHMI_setTimeToRTC(RS485_regbank, hrtc);
 	}
 
 	if (RS485_regbank[0][94] == 1){////// SET Data (Setting 1) -- 14 byte -- Original Data
-		Xanh1	 = RS485_regbank[2][120];	// xanh 1
-		Vang1	 = RS485_regbank[2][121];	// vang 1
-		GiaiToa1 = RS485_regbank[2][122];	// giai toa 1
-						
-		Xanh2	 = RS485_regbank[2][123];	// xanh 2 
-		Vang2	 = RS485_regbank[2][124];	// vang 2
-		GiaiToa2 = RS485_regbank[2][125];	// giai toa 2
-						
-//		X3 = RS485_regbank[2][142];	// xanh 3
-//		V3 = RS485_regbank[2][143];	// vang 3
-//		GT3= RS485_regbank[2][144];	// giai toa 3
-		
-		begin_hour1		= (uint8_t)RS485_regbank[2][126];
-		begin_min1		= (uint8_t)RS485_regbank[2][127];
-		end_hour1		= (uint8_t)RS485_regbank[2][140];
-		end_min1		= (uint8_t)RS485_regbank[2][141];
-		BlinkYel_ENA1	= (uint8_t)RS485_regbank[0][30];
-		
-		// Read from flash
-		Flash_GetData(FLASH_ADD0, &myFlashData[0], 10);
-		
-		// Write to flash
-		myFlashData[0] = RS485_regbank[2][120];							// xanh 1
-		myFlashData[0] = (myFlashData[0]) << 8 | RS485_regbank[2][121];	// vang 1
-		myFlashData[0] = (myFlashData[0]) << 8 | RS485_regbank[2][122];	// giai toa 1						
-		myFlashData[0] = (myFlashData[0]) << 8 | RS485_regbank[2][123];	// xanh 2 
-		myFlashData[1] = RS485_regbank[2][124];							// vang 2
-		myFlashData[1] = (myFlashData[1]) << 8 | RS485_regbank[2][125];	// giai toa 2
-		myFlashData[1] = (myFlashData[1]) << 8 | 0xDD;					// xanh 3
-		myFlashData[1] = (myFlashData[1]) << 8 | 0xDD;					// vang 3
-		myFlashData[2] = 0xDD;											// giai toa 3
-		myFlashData[2] = (myFlashData[2]) << 8 | begin_hour1;			// begin_hour1
-		myFlashData[2] = (myFlashData[2]) << 8 | begin_min1;			// begin_min1
-		myFlashData[2] = (myFlashData[2]) << 8 | end_hour1;				// end_hour1
-		myFlashData[3] = end_min1;										// end_min1
-		myFlashData[3] = (myFlashData[3]) << 8 | BlinkYel_ENA1;			// BlinkYel_ENA1
-		myFlashData[3] = (myFlashData[3]) << 8 | 0xEE;					// Dummy
-		myFlashData[3] = (myFlashData[3]) << 8 | 0xEE;					// Dummy
-		
-		Flash_WriteData(FLASH_ADD0, &myFlashData[0], 10);
-		
-		Total_Time = X1 + V1 + GT1 + GT2;
-		
-		// inform input_ok
-		RS485_regbank[0][94] = 0;
-		RS485_regbank[0][11] = 1;
-		input_ok = 0;
+		// AppWeconHMI_SettingScreen1(RS485_regbank);
+    Xanh1	    = RS485_regbank[2][AppWeconHMI_REG_X1];	// xanh 1
+	  Vang1	    = RS485_regbank[2][AppWeconHMI_REG_V1];	// vang 1
+	  GiaiToa1  = RS485_regbank[2][AppWeconHMI_REG_GT1];	// giai toa 1
+    
+	  Xanh2	 = RS485_regbank[2][AppWeconHMI_REG_X2];	// xanh 2 
+	  Vang2	 = RS485_regbank[2][AppWeconHMI_REG_V2];	// vang 2
+	  GiaiToa2 = RS485_regbank[2][AppWeconHMI_REG_GT2];	// giai toa 2
+    
+//  	X3 = regbank[2][AppWeconHMI_REG_X3];	// xanh 3
+//  	V3 = regbank[2][AppWeconHMI_REG_V3];	// vang 3
+//  	GT3= regbank[2][AppWeconHMI_REG_GT3];	// giai toa 3
+    
+	  begin_hour1		= (uint8_t)RS485_regbank[2][AppWeconHMI_REG_begin_hour1];
+	  begin_min1		= (uint8_t)RS485_regbank[2][AppWeconHMI_REG_begin_min1];
+	  end_hour1		= (uint8_t)RS485_regbank[2][AppWeconHMI_REG_end_hour1];
+	  end_min1		= (uint8_t)RS485_regbank[2][AppWeconHMI_REG_end_min1];
+	  BlinkYel_ENA1	= (uint8_t)RS485_regbank[0][AppWeconHMI_BIT_BlinkYel_ENA1];
+	  // Save current settings to Flash app
+	  Main_GetCurrentFlashSettings(&flash_settings);
+	  (void)AppFlash_SaveSettings(&flash_settings);
+    
+	  Total_Time = Xanh1 + Vang1 + GiaiToa1 + GiaiToa2;
+    
+	  // inform input_ok
+	  RS485_regbank[0][94] = 0;
+	  RS485_regbank[0][AppWeconHMI_BIT_inputOk] = 1;
+	  input_ok = 0;
 	}
 
 	if (RS485_regbank[0][95] == 1){////// SET Data (Setting_3) -- 14 byte -- dung cho gio cao diem 
@@ -1017,34 +990,15 @@ void StartConnectivityTask(void const * argument)
 		end_hour3	= (uint8_t)RS485_regbank[2][90];
 		end_min3	= (uint8_t)RS485_regbank[2][91];
 		CaoDiem_ENA = (uint8_t)RS485_regbank[0][31];
-		
-		// Read from flash
-		Flash_GetData(FLASH_ADD0, &myFlashData[0], 10);
-		// Write to flash
-		myFlashData[4] = RS485_regbank[2][75];							// xanh 1
-		myFlashData[4] = (myFlashData[4]) << 8 | RS485_regbank[2][76];	// vang 1
-		myFlashData[4] = (myFlashData[4]) << 8 | RS485_regbank[2][77];	// giai toa 1						
-		myFlashData[4] = (myFlashData[4]) << 8 | RS485_regbank[2][78];	// xanh 2 
-		myFlashData[5] = RS485_regbank[2][79];							// vang 2
-		myFlashData[5] = (myFlashData[5]) << 8 | RS485_regbank[2][80];	// giai toa 2
-		myFlashData[5] = (myFlashData[5]) << 8 | 0xDD;					// xanh 3
-		myFlashData[5] = (myFlashData[5]) << 8 | 0xDD;					// vang 3
-		myFlashData[6] = 0xDD;											// giai toa 3
-		myFlashData[6] = (myFlashData[6]) << 8 | begin_hour3;			// begin_hour1
-		myFlashData[6] = (myFlashData[6]) << 8 | begin_min3;			// begin_min1
-		myFlashData[6] = (myFlashData[6]) << 8 | end_hour3;				// end_hour1
-		myFlashData[7] = end_min3;										// end_min1
-		myFlashData[7] = (myFlashData[7]) << 8 | CaoDiem_ENA;			// CaoDiem_ENA
-		myFlashData[7] = (myFlashData[7]) << 8 | 0xEE;					// Dummy
-		myFlashData[7] = (myFlashData[7]) << 8 | 0xEE;					// Dummy
-		
-		Flash_WriteData(FLASH_ADD0, &myFlashData[0], 10);
+		// Save current settings to Flash app
+		Main_GetCurrentFlashSettings(&flash_settings);
+		(void)AppFlash_SaveSettings(&flash_settings);
 		
 		CaoDiem_Total_Time = CaoDiem_X2 + CaoDiem_V2 + CaoDiem_GT1 + CaoDiem_GT2;
 		
 		// inform input_ok
 		RS485_regbank[0][95] = 0;
-		RS485_regbank[0][11] = 1;
+		RS485_regbank[0][AppWeconHMI_BIT_inputOk] = 1;
 		input_ok = 0;
 	}
 
@@ -1054,40 +1008,25 @@ void StartConnectivityTask(void const * argument)
 		end_hour2 =		(uint8_t)RS485_regbank[2][205];
 		end_min2 =		(uint8_t)RS485_regbank[2][206];
 		BlinkYel_ENA2 = (uint8_t)RS485_regbank[0][32];
-		
-		// Read from flash
-		Flash_GetData(FLASH_ADD0, &myFlashData[0], 10);
-		// Write to flash
-		myFlashData[8] = begin_hour2;		// begin_hour2
-		myFlashData[8] = (myFlashData[8]) << 8 | begin_min2;	// begin_min2
-		myFlashData[8] = (myFlashData[8]) << 8 | end_hour2;		// end_hour2
-		myFlashData[8] = (myFlashData[8]) << 8 | end_min2;		// end_min2
-		myFlashData[9] = BlinkYel_ENA2;	// BlinkYel_ENA2
-		myFlashData[9] = (myFlashData[9]) << 8 | 0xEE;			// Dummy
-		myFlashData[9] = (myFlashData[9]) << 8 | 0xEE;			// Dummy
-		myFlashData[9] = (myFlashData[9]) << 8 | Thaco_Blink;// for Thaco_Blink
-		
-		Flash_WriteData(FLASH_ADD0, &myFlashData[0], 10);
+		// Save current settings to Flash app
+		Main_GetCurrentFlashSettings(&flash_settings);
+		(void)AppFlash_SaveSettings(&flash_settings);
 		
 		// inform input_ok
 		RS485_regbank[0][98] = 0;
-		RS485_regbank[0][11] = 1;
+		RS485_regbank[0][AppWeconHMI_BIT_inputOk] = 1;
 		input_ok = 0;
 	}
 
 	if (RS485_regbank[0][99] == 1){////// SET Data (Back Setting) -- 01 byte -- Thaco_Blink
 		Thaco_Blink = (uint8_t)RS485_regbank[0][34];
-		
-		// Read from flash
-		Flash_GetData(FLASH_ADD0, &myFlashData[0], 10);
-		// Write to flash
-		myFlashData[9] = (myFlashData[9] & 0xFFFFFFFE) | (Thaco_Blink & 0x01);		// for Thaco_Blink
-		
-		Flash_WriteData(FLASH_ADD0, &myFlashData[0], 10);
+		// Save current settings to Flash app
+		Main_GetCurrentFlashSettings(&flash_settings);
+		(void)AppFlash_SaveSettings(&flash_settings);
 		
 		// inform input_ok
 		RS485_regbank[0][99] = 0;
-		RS485_regbank[0][11] = 1;
+		RS485_regbank[0][AppWeconHMI_BIT_inputOk] = 1;
 		input_ok = 0;
 	}
 

@@ -18,7 +18,7 @@ extern "C" {
 #define APP_RS485_REG_GROUPS        4U
 #define APP_RS485_REG_PER_GROUP     255U
 
-#define APP_RS485_DEFAULT_SLAVE_ID  10U
+#define APP_RS485_HMI_ID  10U // ID for HMI RS485 deceive
 
 #define APP_RS485_FC_READ_COILS               1U
 #define APP_RS485_FC_READ_DISCRETE_INPUTS     2U

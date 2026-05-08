@@ -229,7 +229,7 @@ void AppRs485_Init(const AppRs485_Config_t *cfg)
 
     if (s_cfg.slave_id == 0U)
     {
-        s_cfg.slave_id = APP_RS485_DEFAULT_SLAVE_ID;
+        s_cfg.slave_id = s_cfg.slave_id;
     }
 
     memset(s_regbank, 0, sizeof(s_regbank));

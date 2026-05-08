@@ -86,7 +86,10 @@ extern "C" {
 
 void AppWeconHMI_InitValues(uint16_t regbank[][APP_RS485_REG_PER_GROUP]);
 void AppWeconHMI_ResetInitValues(void);
-void AppWeconHMI_reset_input_RTC_vars(uint16_t regbank[][APP_RS485_REG_PER_GROUP]);
+void AppWeconHMI_resetInputRTCVars(uint16_t regbank[][APP_RS485_REG_PER_GROUP]);
+void AppWeconHMI_sendRTCtoHMI(uint16_t regbank[][APP_RS485_REG_PER_GROUP], RTC_TimeTypeDef Time, RTC_DateTypeDef Date);
+void AppWeconHMI_setTimeToRTC(uint16_t regbank[][APP_RS485_REG_PER_GROUP], RTC_HandleTypeDef source_hrtc);
+void AppWeconHMI_SettingScreen1(uint16_t regbank[][APP_RS485_REG_PER_GROUP]);
 
 #ifdef __cplusplus
 }
