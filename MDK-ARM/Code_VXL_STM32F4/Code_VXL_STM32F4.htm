@@ -3,11 +3,11 @@
 <title>Static Call Graph - [Code_VXL_STM32F4\Code_VXL_STM32F4.axf]</title></head>
 <body><HR>
 <H1>Static Call Graph for image Code_VXL_STM32F4\Code_VXL_STM32F4.axf</H1><HR>
-<BR><P>#&#060CALLGRAPH&#062# ARM Linker, 5060750: Last Updated: Sat May 16 18:18:40 2026
+<BR><P>#&#060CALLGRAPH&#062# ARM Linker, 5060750: Last Updated: Sat May 16 23:44:35 2026
 <BR><P>
-<H3>Maximum Stack Usage =        736 bytes + Unknown(Functions without stacksize, Cycles, Untraceable Function Pointers)</H3><H3>
+<H3>Maximum Stack Usage =        808 bytes + Unknown(Functions without stacksize, Cycles, Untraceable Function Pointers)</H3><H3>
 Call chain for Maximum Stack Depth:</H3>
-ethernet_input &rArr; ip4_input &rArr; tcp_input &rArr; tcp_listen_input &rArr; tcp_alloc &rArr; tcp_kill_state &rArr; tcp_abandon &rArr; tcp_pcb_remove &rArr; tcp_output &rArr; tcp_send_empty_ack &rArr; tcp_output_control_segment &rArr; ip4_output_if &rArr; ip4_output_if_src &rArr; ip4_frag &rArr; pbuf_alloc &rArr; pbuf_alloc_reference &rArr; memp_malloc &rArr; do_memp_malloc_pool &rArr; sys_arch_protect &rArr; osMutexAcquire &rArr; xQueueTakeMutexRecursive &rArr; xQueueSemaphoreTake &rArr; xTaskResumeAll &rArr; xTaskIncrementTick
+ethernetif_init &rArr; low_level_init &rArr; netif_set_link_up &rArr; netif_issue_reports &rArr; etharp_request &rArr; etharp_request_dst &rArr; etharp_raw &rArr; pbuf_alloc &rArr; pbuf_alloc_reference &rArr; memp_malloc &rArr; do_memp_malloc_pool &rArr; sys_arch_protect &rArr; osMutexAcquire &rArr; xQueueTakeMutexRecursive &rArr; xQueueSemaphoreTake &rArr; xTaskResumeAll &rArr; xTaskIncrementTick
 <P>
 <H3>
 Functions with no stack information
@@ -157,8 +157,8 @@ Function Pointers
 Global Symbols
 </H3>
 <P><STRONG><a name="[87]"></a>__main</STRONG> (Thumb, 8 bytes, Stack size 0 bytes, __main.o(!!!main))
-<BR><BR>[Calls]<UL><LI><a href="#[88]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;__scatterload
-<LI><a href="#[89]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;__rt_entry
+<BR><BR>[Calls]<UL><LI><a href="#[89]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;__rt_entry
+<LI><a href="#[88]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;__scatterload
 </UL>
 
 <P><STRONG><a name="[88]"></a>__scatterload</STRONG> (Thumb, 0 bytes, Stack size unknown bytes, __scatter.o(!!!scatter))
@@ -294,8 +294,8 @@ Global Symbols
 <P><STRONG><a name="[258]"></a>__rt_lib_shutdown_user_alloc_1</STRONG> (Thumb, 0 bytes, Stack size unknown bytes, libshutdown2.o(.ARM.Collect$$libshutdown$$0000000C))
 
 <P><STRONG><a name="[89]"></a>__rt_entry</STRONG> (Thumb, 0 bytes, Stack size unknown bytes, __rtentry.o(.ARM.Collect$$rtentry$$00000000))
-<BR><BR>[Called By]<UL><LI><a href="#[8a]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;__scatterload_rt2
-<LI><a href="#[87]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;__main
+<BR><BR>[Called By]<UL><LI><a href="#[87]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;__main
+<LI><a href="#[8a]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;__scatterload_rt2
 </UL>
 
 <P><STRONG><a name="[259]"></a>__rt_entry_presh_1</STRONG> (Thumb, 0 bytes, Stack size unknown bytes, __rtentry2.o(.ARM.Collect$$rtentry$$00000002))
@@ -923,10 +923,10 @@ Global Symbols
 <P><STRONG><a name="[96]"></a>_initio</STRONG> (Thumb, 210 bytes, Stack size 8 bytes, initio.o(.text))
 <BR><BR>[Stack]<UL><LI>Max Depth = 136<LI>Call Chain = _initio &rArr; freopen &rArr; _fclose_internal &rArr; _fflush &rArr; _writebuf &rArr; _sys_write
 </UL>
-<BR>[Calls]<UL><LI><a href="#[b8]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;__rt_SIGRTRED
+<BR>[Calls]<UL><LI><a href="#[b6]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;__aeabi_memclr4
+<LI><a href="#[b8]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;__rt_SIGRTRED
 <LI><a href="#[b7]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;freopen
 <LI><a href="#[b9]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;setvbuf
-<LI><a href="#[b6]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;__aeabi_memclr4
 </UL>
 <BR>[Called By]<UL><LI><a href="#[95]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;__rt_lib_init_stdio_2
 </UL>
@@ -1039,18 +1039,18 @@ Global Symbols
 </UL>
 
 <P><STRONG><a name="[c9]"></a>fopen</STRONG> (Thumb, 74 bytes, Stack size 24 bytes, fopen.o(.text), UNUSED)
-<BR><BR>[Calls]<UL><LI><a href="#[c6]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;malloc
+<BR><BR>[Calls]<UL><LI><a href="#[b6]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;__aeabi_memclr4
+<LI><a href="#[c6]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;malloc
 <LI><a href="#[b7]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;freopen
-<LI><a href="#[b6]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;__aeabi_memclr4
 </UL>
 
 <P><STRONG><a name="[ba]"></a>_fclose_internal</STRONG> (Thumb, 76 bytes, Stack size 32 bytes, fclose.o(.text))
 <BR><BR>[Stack]<UL><LI>Max Depth = 104<LI>Call Chain = _fclose_internal &rArr; _fflush &rArr; _writebuf &rArr; _sys_write
 </UL>
-<BR>[Calls]<UL><LI><a href="#[ca]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;_fflush
+<BR>[Calls]<UL><LI><a href="#[b6]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;__aeabi_memclr4
+<LI><a href="#[ca]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;_fflush
 <LI><a href="#[bb]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;free
 <LI><a href="#[cb]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;_sys_close
-<LI><a href="#[b6]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;__aeabi_memclr4
 </UL>
 <BR>[Called By]<UL><LI><a href="#[b7]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;freopen
 <LI><a href="#[98]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;_terminateio
@@ -1304,6 +1304,7 @@ Global Symbols
 </UL>
 <BR>[Called By]<UL><LI><a href="#[ff]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;HAL_ETH_Stop_IT
 <LI><a href="#[fe]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;HAL_ETH_Start_IT
+<LI><a href="#[9e]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;main
 <LI><a href="#[df]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;ETH_SetMACConfig
 <LI><a href="#[e0]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;ETH_SetDMAConfig
 <LI><a href="#[db]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;ETH_FlushTransmitFIFO
@@ -1387,6 +1388,7 @@ Global Symbols
 <BR>[Calls]<UL><LI><a href="#[e1]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;HAL_GetTick
 </UL>
 <BR>[Called By]<UL><LI><a href="#[d]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;ETH_PHY_IO_ReadReg
+<LI><a href="#[147]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;low_level_init
 </UL>
 
 <P><STRONG><a name="[f8]"></a>HAL_ETH_ReleaseTxPacket</STRONG> (Thumb, 132 bytes, Stack size 32 bytes, stm32f4xx_hal_eth.o(i.HAL_ETH_ReleaseTxPacket))
@@ -1443,9 +1445,9 @@ Global Symbols
 <BR><BR>[Stack]<UL><LI>Max Depth = 240 + Unknown Stack Size
 <LI>Call Chain = HAL_ETH_Start_IT &rArr; ETH_UpdateDescriptor &rArr; HAL_ETH_RxAllocateCallback &rArr; memp_malloc_pool &rArr; do_memp_malloc_pool &rArr; sys_arch_protect &rArr; osMutexAcquire &rArr; xQueueTakeMutexRecursive &rArr; xQueueSemaphoreTake &rArr; xTaskResumeAll &rArr; xTaskIncrementTick
 </UL>
-<BR>[Calls]<UL><LI><a href="#[e5]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;ETH_UpdateDescriptor
+<BR>[Calls]<UL><LI><a href="#[dc]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;HAL_Delay
+<LI><a href="#[e5]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;ETH_UpdateDescriptor
 <LI><a href="#[db]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;ETH_FlushTransmitFIFO
-<LI><a href="#[dc]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;HAL_Delay
 </UL>
 <BR>[Called By]<UL><LI><a href="#[147]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;low_level_init
 <LI><a href="#[72]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;ethernet_link_thread
@@ -1454,8 +1456,8 @@ Global Symbols
 <P><STRONG><a name="[ff]"></a>HAL_ETH_Stop_IT</STRONG> (Thumb, 184 bytes, Stack size 24 bytes, stm32f4xx_hal_eth.o(i.HAL_ETH_Stop_IT))
 <BR><BR>[Stack]<UL><LI>Max Depth = 56<LI>Call Chain = HAL_ETH_Stop_IT &rArr; ETH_FlushTransmitFIFO &rArr; HAL_Delay
 </UL>
-<BR>[Calls]<UL><LI><a href="#[db]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;ETH_FlushTransmitFIFO
-<LI><a href="#[dc]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;HAL_Delay
+<BR>[Calls]<UL><LI><a href="#[dc]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;HAL_Delay
+<LI><a href="#[db]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;ETH_FlushTransmitFIFO
 </UL>
 <BR>[Called By]<UL><LI><a href="#[72]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;ethernet_link_thread
 </UL>
@@ -1758,7 +1760,7 @@ Global Symbols
 </UL>
 <BR>[Address Reference Count : 1]<UL><LI> startup_stm32f407xx.o(RESET)
 </UL>
-<P><STRONG><a name="[129]"></a>SystemClock_Config</STRONG> (Thumb, 170 bytes, Stack size 80 bytes, main.o(i.SystemClock_Config))
+<P><STRONG><a name="[129]"></a>SystemClock_Config</STRONG> (Thumb, 172 bytes, Stack size 80 bytes, main.o(i.SystemClock_Config))
 <BR><BR>[Stack]<UL><LI>Max Depth = 200<LI>Call Chain = SystemClock_Config &rArr; HAL_RCC_ClockConfig &rArr; HAL_InitTick &rArr; HAL_NVIC_SetPriority &rArr; __NVIC_SetPriority
 </UL>
 <BR>[Calls]<UL><LI><a href="#[110]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;HAL_RCC_OscConfig
@@ -1904,7 +1906,7 @@ Global Symbols
 </UL>
 
 <P><STRONG><a name="[70]"></a>ethernetif_init</STRONG> (Thumb, 58 bytes, Stack size 8 bytes, ethernetif.o(i.ethernetif_init))
-<BR><BR>[Stack]<UL><LI>Max Depth = 528 + Unknown Stack Size
+<BR><BR>[Stack]<UL><LI>Max Depth = 808 + Unknown Stack Size
 <LI>Call Chain = ethernetif_init &rArr; low_level_init &rArr; netif_set_link_up &rArr; netif_issue_reports &rArr; etharp_request &rArr; etharp_request_dst &rArr; etharp_raw &rArr; pbuf_alloc &rArr; pbuf_alloc_reference &rArr; memp_malloc &rArr; do_memp_malloc_pool &rArr; sys_arch_protect &rArr; osMutexAcquire &rArr; xQueueTakeMutexRecursive &rArr; xQueueSemaphoreTake &rArr; xTaskResumeAll &rArr; xTaskIncrementTick
 </UL>
 <BR>[Calls]<UL><LI><a href="#[147]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;low_level_init
@@ -2130,7 +2132,7 @@ Global Symbols
 <BR>[Called By]<UL><LI><a href="#[121]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;tcpip_init
 </UL>
 
-<P><STRONG><a name="[9e]"></a>main</STRONG> (Thumb, 62 bytes, Stack size 0 bytes, main.o(i.main))
+<P><STRONG><a name="[9e]"></a>main</STRONG> (Thumb, 84 bytes, Stack size 0 bytes, main.o(i.main))
 <BR><BR>[Stack]<UL><LI>Max Depth = 200 + Unknown Stack Size
 <LI>Call Chain = main &rArr; SystemClock_Config &rArr; HAL_RCC_ClockConfig &rArr; HAL_InitTick &rArr; HAL_NVIC_SetPriority &rArr; __NVIC_SetPriority
 </UL>
@@ -2139,6 +2141,7 @@ Global Symbols
 <LI><a href="#[175]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;osKernelInitialize
 <LI><a href="#[103]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;HAL_Init
 <LI><a href="#[11d]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;HAL_GPIO_WritePin
+<LI><a href="#[dc]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;HAL_Delay
 <LI><a href="#[129]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;SystemClock_Config
 <LI><a href="#[11f]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;MX_GPIO_Init
 </UL>
@@ -4028,7 +4031,7 @@ Global Symbols
 <H3>
 Local Symbols
 </H3>
-<P><STRONG><a name="[11f]"></a>MX_GPIO_Init</STRONG> (Thumb, 300 bytes, Stack size 32 bytes, main.o(i.MX_GPIO_Init))
+<P><STRONG><a name="[11f]"></a>MX_GPIO_Init</STRONG> (Thumb, 332 bytes, Stack size 32 bytes, main.o(i.MX_GPIO_Init))
 <BR><BR>[Stack]<UL><LI>Max Depth = 56<LI>Call Chain = MX_GPIO_Init &rArr; HAL_GPIO_Init
 </UL>
 <BR>[Calls]<UL><LI><a href="#[11d]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;HAL_GPIO_WritePin
@@ -4041,8 +4044,8 @@ Local Symbols
 <P><STRONG><a name="[71]"></a>ethernet_link_status_updated</STRONG> (Thumb, 2 bytes, Stack size 0 bytes, lwip.o(i.ethernet_link_status_updated))
 <BR>[Address Reference Count : 1]<UL><LI> lwip.o(i.MX_LWIP_Init)
 </UL>
-<P><STRONG><a name="[147]"></a>low_level_init</STRONG> (Thumb, 444 bytes, Stack size 168 bytes, ethernetif.o(i.low_level_init))
-<BR><BR>[Stack]<UL><LI>Max Depth = 520 + Unknown Stack Size
+<P><STRONG><a name="[147]"></a>low_level_init</STRONG> (Thumb, 540 bytes, Stack size 448 bytes, ethernetif.o(i.low_level_init))
+<BR><BR>[Stack]<UL><LI>Max Depth = 800 + Unknown Stack Size
 <LI>Call Chain = low_level_init &rArr; netif_set_link_up &rArr; netif_issue_reports &rArr; etharp_request &rArr; etharp_request_dst &rArr; etharp_raw &rArr; pbuf_alloc &rArr; pbuf_alloc_reference &rArr; memp_malloc &rArr; do_memp_malloc_pool &rArr; sys_arch_protect &rArr; osMutexAcquire &rArr; xQueueTakeMutexRecursive &rArr; xQueueSemaphoreTake &rArr; xTaskResumeAll &rArr; xTaskIncrementTick
 </UL>
 <BR>[Calls]<UL><LI><a href="#[167]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;osSemaphoreNew
@@ -4055,6 +4058,7 @@ Local Symbols
 <LI><a href="#[141]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;LAN8742_GetLinkState
 <LI><a href="#[fe]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;HAL_ETH_Start_IT
 <LI><a href="#[fc]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;HAL_ETH_SetMACConfig
+<LI><a href="#[e3]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;HAL_ETH_ReadPHYRegister
 <LI><a href="#[ee]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;HAL_ETH_Init
 <LI><a href="#[144]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;HAL_ETH_GetMACConfig
 <LI><a href="#[124]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;netif_set_up

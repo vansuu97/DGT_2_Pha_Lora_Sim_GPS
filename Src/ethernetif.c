@@ -262,6 +262,22 @@ static void low_level_init(struct netif *netif)
 
 /* USER CODE BEGIN PHY_PRE_CONFIG */
 
+	/* USER CODE BEGIN DEBUG */
+	uint32_t phyid1 = 0, phyid2 = 0;
+	HAL_StatusTypeDef status1, status2;
+	status1 = HAL_ETH_ReadPHYRegister(&heth, LAN8742_PHYSCSR, 2, &phyid1);
+	status2 = HAL_ETH_ReadPHYRegister(&heth, LAN8742_PHYSCSR, 3, &phyid2);
+	
+	uint32_t phy_scan_01[32] = {0};
+  uint32_t phy_scan_02[32] = {0};
+	for(int i = 0; i < 32; i++)
+	{
+    HAL_ETH_ReadPHYRegister(&heth, i, 1, &phy_scan_01[i]);
+		HAL_ETH_ReadPHYRegister(&heth, i, 2, &phy_scan_02[i]);
+	}
+	
+	/* USER CODE BEGIN DEBUG */
+	
 /* USER CODE END PHY_PRE_CONFIG */
   /* Set PHY IO functions */
   LAN8742_RegisterBusIO(&LAN8742, &LAN8742_IOCtx);
