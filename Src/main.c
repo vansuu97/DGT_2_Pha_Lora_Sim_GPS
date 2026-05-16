@@ -34,7 +34,7 @@ typedef StaticTask_t osStaticThreadDef_t;
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
-
+uint32_t g_u32_s_MonitorVar = 0;
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -45,7 +45,7 @@ typedef StaticTask_t osStaticThreadDef_t;
 /* Private variables ---------------------------------------------------------*/
 /* Definitions for MainTask */
 osThreadId_t MainTaskHandle;
-uint32_t MainTaskBuffer[ 512 ];
+uint32_t MainTaskBuffer[ 1024 ];
 osStaticThreadDef_t MainTaskControlBlock;
 const osThreadAttr_t MainTask_attributes = {
   .name = "MainTask",
@@ -65,7 +65,7 @@ const osThreadAttr_t ETHConnect_attributes = {
   .cb_size = sizeof(ETHTaskControlBlock),
   .stack_mem = &ETHTaskBuffer[0],
   .stack_size = sizeof(ETHTaskBuffer),
-  .priority = (osPriority_t) osPriorityRealtime,
+  .priority = (osPriority_t) osPriorityNormal,
 };
 /* USER CODE BEGIN PV */
 
@@ -333,17 +333,20 @@ void StartMainTask(void *argument)
 void StartETHTask(void *argument)
 {
   /* USER CODE BEGIN StartETHTask */
+	uint16_t ls_u16_s_count = 0;
   /* Infinite loop */
   for(;;)
   {
-    osDelay(1);
+		ls_u16_s_count++;
+		g_u32_s_MonitorVar = (uint32_t)ls_u16_s_count;
+    osDelay(1000);
   }
   /* USER CODE END StartETHTask */
 }
 
 /**
   * @brief  Period elapsed callback in non blocking mode
-  * @note   This function is called  when TIM1 interrupt took place, inside
+  * @note   This function is called  when TIM6 interrupt took place, inside
   * HAL_TIM_IRQHandler(). It makes a direct call to HAL_IncTick() to increment
   * a global variable "uwTick" used as application time base.
   * @param  htim : TIM handle
@@ -354,7 +357,7 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
   /* USER CODE BEGIN Callback 0 */
 
   /* USER CODE END Callback 0 */
-  if (htim->Instance == TIM1)
+  if (htim->Instance == TIM6)
   {
     HAL_IncTick();
   }
