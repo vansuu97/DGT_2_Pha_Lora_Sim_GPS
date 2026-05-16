@@ -158,7 +158,7 @@
           <Type>0</Type>
           <LineNumber>117</LineNumber>
           <EnabledFlag>1</EnabledFlag>
-          <Address>134242820</Address>
+          <Address>134242844</Address>
           <ByteObject>0</ByteObject>
           <HtxType>0</HtxType>
           <ManyObjects>0</ManyObjects>
@@ -174,7 +174,7 @@
         <Ww>
           <count>0</count>
           <WinNumber>1</WinNumber>
-          <ItemText>ls_u16_s_count,0x0A</ItemText>
+          <ItemText>g_u32_s_MonitorVar01,0x0A</ItemText>
         </Ww>
       </WatchWindow1>
       <Tracepoint>

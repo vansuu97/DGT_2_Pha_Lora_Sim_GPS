@@ -34,7 +34,7 @@ typedef StaticTask_t osStaticThreadDef_t;
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
-uint32_t g_u32_s_MonitorVar = 0;
+uint32_t g_u32_s_MonitorVar01 = 0;
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -55,17 +55,17 @@ const osThreadAttr_t MainTask_attributes = {
   .stack_size = sizeof(MainTaskBuffer),
   .priority = (osPriority_t) osPriorityNormal,
 };
-/* Definitions for ETHConnect */
-osThreadId_t ETHConnectHandle;
-uint32_t ETHTaskBuffer[ 1024 ];
-osStaticThreadDef_t ETHTaskControlBlock;
-const osThreadAttr_t ETHConnect_attributes = {
-  .name = "ETHConnect",
-  .cb_mem = &ETHTaskControlBlock,
-  .cb_size = sizeof(ETHTaskControlBlock),
-  .stack_mem = &ETHTaskBuffer[0],
-  .stack_size = sizeof(ETHTaskBuffer),
-  .priority = (osPriority_t) osPriorityNormal,
+/* Definitions for MonitorTask */
+osThreadId_t MonitorTaskHandle;
+uint32_t MonitorTaskBuffer[ 1024 ];
+osStaticThreadDef_t MonitorTaskControlBlock;
+const osThreadAttr_t MonitorTask_attributes = {
+  .name = "MonitorTask",
+  .cb_mem = &MonitorTaskControlBlock,
+  .cb_size = sizeof(MonitorTaskControlBlock),
+  .stack_mem = &MonitorTaskBuffer[0],
+  .stack_size = sizeof(MonitorTaskBuffer),
+  .priority = (osPriority_t) osPriorityRealtime,
 };
 /* USER CODE BEGIN PV */
 
@@ -75,7 +75,7 @@ const osThreadAttr_t ETHConnect_attributes = {
 void SystemClock_Config(void);
 static void MX_GPIO_Init(void);
 void StartMainTask(void *argument);
-void StartETHTask(void *argument);
+void StartMonitorTask(void *argument);
 
 /* USER CODE BEGIN PFP */
 /* USER CODE END PFP */
@@ -156,8 +156,8 @@ int main(void)
   /* creation of MainTask */
   MainTaskHandle = osThreadNew(StartMainTask, NULL, &MainTask_attributes);
 
-  /* creation of ETHConnect */
-  ETHConnectHandle = osThreadNew(StartETHTask, NULL, &ETHConnect_attributes);
+  /* creation of MonitorTask */
+  MonitorTaskHandle = osThreadNew(StartMonitorTask, NULL, &MonitorTask_attributes);
 
   /* USER CODE BEGIN RTOS_THREADS */
   /* add threads, ... */
@@ -306,6 +306,32 @@ void StartMainTask(void *argument)
   /* init code for LWIP */
   MX_LWIP_Init();
   /* USER CODE BEGIN 5 */
+	uint32_t lc_u32_s_MonitorCounter = 0;
+  /* Infinite loop */
+	for(;;)
+  {
+		lc_u32_s_MonitorCounter++;
+		if (lc_u32_s_MonitorCounter%1000 == 0 )
+		{
+			g_u32_s_MonitorVar01++;
+			lc_u32_s_MonitorCounter = 0;
+		}
+		
+    osDelay(1);
+  }
+  /* USER CODE END 5 */
+}
+
+/* USER CODE BEGIN Header_StartMonitorTask */
+/**
+* @brief Function implementing the MonitorTask thread.
+* @param argument: Not used
+* @retval None
+*/
+/* USER CODE END Header_StartMonitorTask */
+void StartMonitorTask(void *argument)
+{
+  /* USER CODE BEGIN StartMonitorTask */
 	uint8_t Pattern = 0x01;
   /* Infinite loop */
   for(;;)
@@ -318,30 +344,9 @@ void StartMainTask(void *argument)
 			Pattern = 0x01;
 		}
 		
-    osDelay(1);
+    osDelay(100);
   }
-  /* USER CODE END 5 */
-}
-
-/* USER CODE BEGIN Header_StartETHTask */
-/**
-* @brief Function implementing the ETHConnect thread.
-* @param argument: Not used
-* @retval None
-*/
-/* USER CODE END Header_StartETHTask */
-void StartETHTask(void *argument)
-{
-  /* USER CODE BEGIN StartETHTask */
-	uint16_t ls_u16_s_count = 0;
-  /* Infinite loop */
-  for(;;)
-  {
-		ls_u16_s_count++;
-		g_u32_s_MonitorVar = (uint32_t)ls_u16_s_count;
-    osDelay(1000);
-  }
-  /* USER CODE END StartETHTask */
+  /* USER CODE END StartMonitorTask */
 }
 
 /**
