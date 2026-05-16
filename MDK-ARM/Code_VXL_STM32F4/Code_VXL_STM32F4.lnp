@@ -116,7 +116,7 @@
 "code_vxl_stm32f4\nd6.o"
 "code_vxl_stm32f4\sys_arch.o"
 "code_vxl_stm32f4\mqtt.o"
---strict --scatter "Code_VXL_STM32F4\Code_VXL_STM32F4.sct"
+--library_type=microlib --strict --scatter "Code_VXL_STM32F4\Code_VXL_STM32F4.sct"
 --summary_stderr --info summarysizes --map --load_addr_map_info --xref --callgraph --symbols
 --info sizes --info totals --info unused --info veneers
 --list "Code_VXL_STM32F4.map" -o Code_VXL_STM32F4\Code_VXL_STM32F4.axf
