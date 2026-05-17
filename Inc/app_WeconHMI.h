@@ -1,3 +1,13 @@
+/**
+  ******************************************************************************
+  * @file    app_WeconHMI.h
+  * @author  Suu Nguyen Van - FPT Company 0971346938
+  * @version V1.0
+  * @date    14-05-2026
+  * @brief   Header for flash application.
+  ******************************************************************************
+  */
+
 #ifndef APP_WECON_HMI_H
 #define APP_WECON_HMI_H
 
@@ -9,87 +19,106 @@ extern "C" {
 #include "app_rs485.h"
 
 /* Global register bank for Wecon HMI */
-#define AppWeconHMI_BIT_D1                (1u)
+#define AppWeconHMI_BIT_X1                (1u)
 #define AppWeconHMI_BIT_V1                (2u)
-#define AppWeconHMI_BIT_X1                (3u)
+#define AppWeconHMI_BIT_D1                (3u)
 #define AppWeconHMI_BIT_X2                (4u)
 #define AppWeconHMI_BIT_V2                (5u)
 #define AppWeconHMI_BIT_D2                (6u)
-#define AppWeconHMI_BIT_getTime_HMI       (97u)
+#define AppWeconHMI_BIT_X3                (7u)
+#define AppWeconHMI_BIT_V3                (8u)
+#define AppWeconHMI_BIT_D3                (9u)
 #define AppWeconHMI_BIT_inputOk       	  (11u)
-#define AppWeconHMI_BIT_SET_TIME_RTC      (96u)
 
-/* Screen setting 1 */
+/* Screen setting 1 normal */
+#define AppWeconHMI_BIT_NORMAL_SAVE     (94u)
+#define AppWeconHMI_BIT_BlinkYel_ENA1   (30u)
 #define AppWeconHMI_REG_X1              (120u)
 #define AppWeconHMI_REG_V1              (121u)
 #define AppWeconHMI_REG_GT1             (122u)
-
 #define AppWeconHMI_REG_X2              (123u)
 #define AppWeconHMI_REG_V2              (124u)
 #define AppWeconHMI_REG_GT2             (125u)
-
 #define AppWeconHMI_REG_X3              (142u)
 #define AppWeconHMI_REG_V3              (143u)
 #define AppWeconHMI_REG_GT3             (144u)
-
 #define AppWeconHMI_REG_begin_hour1	    (126u)
 #define AppWeconHMI_REG_begin_min1	    (127u)
 #define AppWeconHMI_REG_end_hour1	    (140u)
 #define AppWeconHMI_REG_end_min1	    (141u)
-#define AppWeconHMI_BIT_BlinkYel_ENA1   (30u)
 
-/* Screen setting 2 */
-#define AppWeconHMI_REG_begin_hour2	    (203u)
-#define AppWeconHMI_REG_begin_min2	    (204u)
-#define AppWeconHMI_REG_end_hour2	    (205u)
-#define AppWeconHMI_REG_end_min2	    (206u)
-#define AppWeconHMI_BIT_BlinkYel_ENA2   (32u)
+/* Screen setting 2 Blink Yellow 2*/
+#define AppWeconHMI_BIT_BlinkYel2_SAVE		(98u)
+#define AppWeconHMI_BIT_BlinkYel2_flag   	(32u)
+#define AppWeconHMI_REG_BlinkYel2_start_h	(203u)
+#define AppWeconHMI_REG_BlinkYel2_start_m	(204u)
+#define AppWeconHMI_REG_BlinkYel2_end_h	    (205u)
+#define AppWeconHMI_REG_BlinkYel2_end_m	    (206u)
 
-/* Screen setting 3 */
-#define AppWeconHMI_REG_CaoDiem_X1  (75u)
-#define AppWeconHMI_REG_CaoDiem_V1  (76u)
-#define AppWeconHMI_REG_CaoDiem_GT1 (77u)
-						
-#define AppWeconHMI_REG_CaoDiem_X2  (78u)
-#define AppWeconHMI_REG_CaoDiem_V2  (79u)
-#define AppWeconHMI_REG_CaoDiem_GT2 (80u)
+/* Screen setting 3 - peak1 */
+#define AppWeconHMI_BIT_peak1_SAVE 		(95u)
+#define AppWeconHMI_BIT_peak1_ENA     	(31u)
+#define AppWeconHMI_REG_peak1_X1  		(75u)
+#define AppWeconHMI_REG_peak1_V1  		(76u)
+#define AppWeconHMI_REG_peak1_GT1 		(77u)
+#define AppWeconHMI_REG_peak1_X2  		(78u)
+#define AppWeconHMI_REG_peak1_V2  		(79u)
+#define AppWeconHMI_REG_peak1_GT2 		(80u)
+#define AppWeconHMI_REG_peak1_X3  		(92u)
+#define AppWeconHMI_REG_peak1_V3  		(93u)
+#define AppWeconHMI_REG_peak1_GT3 		(94u)
+#define AppWeconHMI_REG_peak1_start_h   (81u)
+#define AppWeconHMI_REG_peak1_start_m	(82u)
+#define AppWeconHMI_REG_peak1_end_h	    (90u)
+#define AppWeconHMI_REG_peak1_end_m	    (91u)
 
-#define AppWeconHMI_REG_CaoDiem_X3  (92u)
-#define AppWeconHMI_REG_CaoDiem_V3  (93u)
-#define AppWeconHMI_REG_CaoDiem_GT3  (94u)
-		
-#define AppWeconHMI_REG_begin_hour3     (81u)
-#define AppWeconHMI_REG_begin_min3	    (82u)
-#define AppWeconHMI_REG_end_hour3	    (90u)
-#define AppWeconHMI_REG_end_min3	    (91u)
-#define AppWeconHMI_BIT_CaoDiem_ENA     (31u)
+/* Screen setting 3 - peak2 */
+#define AppWeconHMI_BIT_peak2_SAVE 		(100u)
+#define AppWeconHMI_BIT_peak2_ENA     	(33u)
+#define AppWeconHMI_REG_peak2_X1  		(92u)
+#define AppWeconHMI_REG_peak2_V1  		(93u)
+#define AppWeconHMI_REG_peak2_GT1 		(94u)
+#define AppWeconHMI_REG_peak2_X2  		(95u)
+#define AppWeconHMI_REG_peak2_V2  		(96u)
+#define AppWeconHMI_REG_peak2_GT2 		(97u)
+#define AppWeconHMI_REG_peak2_X3  		(98u)
+#define AppWeconHMI_REG_peak2_V3  		(99u)
+#define AppWeconHMI_REG_peak2_GT3 		(100u)
+#define AppWeconHMI_REG_peak2_start_h   (101u)
+#define AppWeconHMI_REG_peak2_start_m	(102u)
+#define AppWeconHMI_REG_peak2_end_h	    (103u)
+#define AppWeconHMI_REG_peak2_end_m	    (104u)
+
 
 /* Screen back setting */
-#define AppWeconHMI_BIT_Thaco_Blink     (34u)
+#define AppWeconHMI_BIT_Thaco_Blink_flag_SAVE 	(99u)
+#define AppWeconHMI_BIT_Thaco_Blink_flag 		(34u)
 
 /* Screen realtime */
+#define AppWeconHMI_BIT_getTime_HMI     (97u)
 #define AppWeconHMI_REG_view_Hours	    (52u)
 #define AppWeconHMI_REG_view_Minutes	(53u)
 #define AppWeconHMI_REG_view_Seconds	(54u)
 #define AppWeconHMI_REG_view_Date	    (55u)
 #define AppWeconHMI_REG_view_Month	    (56u)
 #define AppWeconHMI_REG_view_Year	    (57u)
-	
+
+#define AppWeconHMI_BIT_setTime_SAVE 	(96u)
 #define AppWeconHMI_REG_setTime_Hours 	(58u)
 #define AppWeconHMI_REG_setTime_Minutes (59u)
 #define AppWeconHMI_REG_setTime_Seconds (70u)
-
-#define AppWeconHMI_REG_setDate_Month  (72u)
-#define AppWeconHMI_REG_setDate_Date   (71u)
-#define AppWeconHMI_REG_setDate_Year   (73u)
+#define AppWeconHMI_REG_setDate_Month  	(72u)
+#define AppWeconHMI_REG_setDate_Date   	(71u)
+#define AppWeconHMI_REG_setDate_Year   	(73u)
 #define AppWeconHMI_REG_setDate_WeekDay (74u)
 
-void AppWeconHMI_InitValues(uint16_t regbank[][APP_RS485_REG_PER_GROUP]);
+void AppWeconHMI_InitValues(uint16_t regbank[][APP_RS485_REG_PER_GROUP], DGT_Settings_t *s);
 void AppWeconHMI_ResetInitValues(void);
 void AppWeconHMI_resetInputRTCVars(uint16_t regbank[][APP_RS485_REG_PER_GROUP]);
 void AppWeconHMI_sendRTCtoHMI(uint16_t regbank[][APP_RS485_REG_PER_GROUP], RTC_TimeTypeDef Time, RTC_DateTypeDef Date);
 void AppWeconHMI_setTimeToRTC(uint16_t regbank[][APP_RS485_REG_PER_GROUP], RTC_HandleTypeDef source_hrtc);
-void AppWeconHMI_SettingScreen1(uint16_t regbank[][APP_RS485_REG_PER_GROUP]);
+void AppWeconHMI_NormalSetting(uint16_t regbank[][APP_RS485_REG_PER_GROUP], DGT_Settings_t *s);
+void AppWeconHMI_Process(uint16_t regbank[][APP_RS485_REG_PER_GROUP], DGT_Settings_t *s);
 
 #ifdef __cplusplus
 }

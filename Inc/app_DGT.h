@@ -16,12 +16,16 @@ extern "C" {
 #endif
 
 #include <stdint.h>
+#include "main.h"
+
+
+#define AppDGT_test (1u)
 
 /**
  * @brief  Calculate automatic yellow-blink mode from configured time ranges.
  * @retval 1: yellow blink active, 0: normal traffic cycle
  */
-uint8_t AppDGT_BlinkYellowAutoCalculate(void);
+uint8_t AppDGT_BlinkYellowAutoCalculate(DGT_Settings_t s);
 
 /**
  * @brief  Run manual traffic-light mode.
@@ -36,13 +40,13 @@ void AppDGT2P_BlinkYellow(void);
 /**
  * @brief  Run automatic traffic-light cycle.
  */
-void AppDGT2P_Auto(void);
+void AppDGT2P_Auto(DGT_Settings_t source_Settings, DGT_Phase_t source_currentPhase);
 
 /**
  * @brief  Main DGT application process.
  * @note   Call this function periodically from main loop or RTOS task.
  */
-void AppDGT2P_Process(void);
+void AppDGT2P_Process(DGT_Settings_t *s);
 
 #ifdef __cplusplus
 }

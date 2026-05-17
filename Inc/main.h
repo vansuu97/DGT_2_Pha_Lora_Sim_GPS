@@ -36,7 +36,37 @@ extern "C" {
 
 /* Exported types ------------------------------------------------------------*/
 /* USER CODE BEGIN ET */
-
+typedef struct
+{
+    uint8_t flag; // enable or not
+    uint8_t start_h;
+    uint8_t start_m;
+    uint8_t end_h;
+    uint8_t end_m;
+} DGT_OnTime_t;
+typedef struct
+{
+    uint8_t x;
+    uint8_t v;
+    uint8_t gt;
+} DGT_PhaseData_t;
+typedef struct
+{
+    DGT_PhaseData_t phase1;
+    DGT_PhaseData_t phase2;
+    DGT_PhaseData_t phase3;
+} DGT_Phase_t;
+typedef struct
+{
+    DGT_Phase_t normal;
+    DGT_Phase_t peak1;
+    DGT_Phase_t peak2;
+    DGT_OnTime_t BlinkYel1_OnTime;
+    DGT_OnTime_t BlinkYel2_OnTime;
+    DGT_OnTime_t peak1_OnTime;
+    DGT_OnTime_t peak2_OnTime;
+    uint8_t Thaco_Blink_flag;
+} DGT_Settings_t;
 /* USER CODE END ET */
 
 /* Exported constants --------------------------------------------------------*/

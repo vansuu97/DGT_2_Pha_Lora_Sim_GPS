@@ -1,17 +1,51 @@
+/**
+ * @file    app_I2CvsESP32.c
+ * @brief   Send Date Time + voltage/current + DGT_Settings_t to ESP32 by I2C.
+ *
+ * Frame format:
+ *   [0] counter
+ *   [1] frame_id       : 0..3
+ *   [2] payload_len    : valid payload bytes in this frame
+ *   [3..] payload
+ *   [last] crc8        : CRC of all bytes before CRC
+ *
+ * Total payload table:
+ *   [0]  g_Voltage_H
+ *   [1]  g_Voltage_L
+ *   [2]  g_Current_H
+ *   [3]  g_Current_L
+ *   [4]  Date
+ *   [5]  Month
+ *   [6]  Year
+ *   [7]  Hours
+ *   [8]  Minutes
+ *   [9]  Seconds
+ *   [10..] raw g_dgtData
+ *
+ * With current DGT_Settings_t:
+ *   sizeof(DGT_Settings_t) = 48 bytes
+ *   total payload = 10 + 48 = 58 bytes
+ *   split payload = 15 + 15 + 15 + 13 bytes
+ */
+
 #include "app_I2CvsESP32.h"
 #include <stddef.h>
 #include <string.h>
 
-/*
- * I2C frame app for STM32 -> ESP32.
- *
- * This module sends 3 separated packages:
- * 1. REALTIME        : current date/time, voltage/current, blink-yellow-1 time window.
- * 2. NORMAL_SETTING  : control flags, normal traffic-light timing values, blink-yellow-2 time window.
- * 3. PEAK_SETTING    : peak-time window and peak traffic-light timing values.
- *
- * Frame format: CMD + DATA + Counter + CRC8.
- */
+/* ===================== EXTERN VARIABLES ===================== */
+
+extern I2C_HandleTypeDef hi2c1; // current I2C handle, defined in main.c
+extern DGT_Settings_t g_dgtData;
+
+extern uint8_t g_Voltage_H;
+extern uint8_t g_Voltage_L;
+extern uint8_t g_Current_H;
+extern uint8_t g_Current_L;
+
+extern RTC_TimeTypeDef getTime;
+extern RTC_DateTypeDef getDate;
+
+/* ===================== CRC8 ===================== */
 
 static const uint8_t CRC8_TABLE[256] = {
     0x00, 0x07, 0x0E, 0x09, 0x1C, 0x1B, 0x12, 0x15,
@@ -48,23 +82,11 @@ static const uint8_t CRC8_TABLE[256] = {
     0xE6, 0xE1, 0xE8, 0xEF, 0xFA, 0xFD, 0xF4, 0xF3
 };
 
-
-static I2C_HandleTypeDef *s_hi2c = NULL;
-static uint16_t s_slave_addr_7bit = APP_I2CVSESP32_ADDR_7BIT;
-static uint32_t s_timeout_ms = 100U;
-
-static uint8_t s_tx_realtime_frame[APP_I2CVSESP32_REALTIME_FRAME_SIZE];
-static uint8_t s_tx_normal_frame[APP_I2CVSESP32_NORMAL_FRAME_SIZE];
-static uint8_t s_tx_peak_frame[APP_I2CVSESP32_PEAK_FRAME_SIZE];
-
-static uint8_t s_frame_counter = 0U;
-
 static uint8_t crc8_cal(const uint8_t *data, size_t length)
 {
     uint8_t crc = 0x00U;
-    size_t i;
 
-    for (i = 0U; i < length; ++i)
+    for (size_t i = 0U; i < length; ++i)
     {
         crc = CRC8_TABLE[crc ^ data[i]];
     }
@@ -72,240 +94,83 @@ static uint8_t crc8_cal(const uint8_t *data, size_t length)
     return crc;
 }
 
-static uint8_t AppI2CvsESP32_NextCounter(void)
+/* ===================== PRIVATE ===================== */
+
+static void AppI2CvsESP32_BuildPayload(uint8_t *payload, uint16_t *payload_len)
 {
-    s_frame_counter++;
+    uint16_t idx = 0U;
+    const uint8_t *raw_dgt = (const uint8_t *)&g_dgtData;
 
-    if (s_frame_counter == 0U)
-    {
-        s_frame_counter = 1U;
-    }
+    payload[idx++] = g_Voltage_H;
+    payload[idx++] = g_Voltage_L;
+    payload[idx++] = g_Current_H;
+    payload[idx++] = g_Current_L;
 
-    return s_frame_counter;
+    payload[idx++] = (uint8_t)getDate.Date;
+    payload[idx++] = (uint8_t)getDate.Month;
+    payload[idx++] = (uint8_t)getDate.Year;
+    payload[idx++] = (uint8_t)getTime.Hours;
+    payload[idx++] = (uint8_t)getTime.Minutes;
+    payload[idx++] = (uint8_t)getTime.Seconds;
+
+    memcpy(&payload[idx], raw_dgt, sizeof(DGT_Settings_t));
+    idx += (uint16_t)sizeof(DGT_Settings_t);
+
+    *payload_len = idx;
 }
 
-static HAL_StatusTypeDef AppI2CvsESP32_Transmit(const uint8_t *frame, uint16_t length)
+/* ===================== PUBLIC ===================== */
+
+void AppI2CvsESP32_Process(void)
 {
-    if ((s_hi2c == NULL) || (frame == NULL))
+    static uint8_t packet_counter = 0U;
+
+    uint8_t payload[APP_I2C_EXTRA_DATA_SIZE + sizeof(DGT_Settings_t)];
+    uint16_t payload_total_len = 0U;
+    uint16_t payload_offset = 0U;
+
+    AppI2CvsESP32_BuildPayload(payload, &payload_total_len);
+
+    for (uint8_t frame_id = 0U; frame_id < APP_I2C_FRAME_COUNT; frame_id++)
     {
-        return HAL_ERROR;
+        uint8_t frame[APP_I2C_MAX_FRAME_SIZE];
+        uint16_t remain;
+        uint8_t payload_len_this_frame;
+        uint16_t frame_len_without_crc;
+        uint16_t frame_len_with_crc;
+
+        remain = payload_total_len - payload_offset;
+
+        if (remain > APP_I2C_MAX_PAYLOAD_PER_FRAME)
+        {
+            payload_len_this_frame = APP_I2C_MAX_PAYLOAD_PER_FRAME;
+        }
+        else
+        {
+            payload_len_this_frame = (uint8_t)remain;
+        }
+
+        frame[0] = packet_counter;
+        frame[1] = frame_id;
+        frame[2] = payload_len_this_frame;
+
+        memcpy(&frame[3], &payload[payload_offset], payload_len_this_frame);
+
+        frame_len_without_crc = (uint16_t)(APP_I2C_FRAME_HEADER_SIZE + payload_len_this_frame);
+        frame[frame_len_without_crc] = crc8_cal(frame, frame_len_without_crc);
+
+        frame_len_with_crc = frame_len_without_crc + APP_I2C_FRAME_CRC_SIZE;
+
+        (void)HAL_I2C_Master_Transmit(&hi2c1,
+                                      APP_I2C_ADDR_7BIT << 1,
+                                      frame,
+                                      frame_len_with_crc,
+                                      APP_I2C_TIMEOUT_MS);
+
+        payload_offset += payload_len_this_frame;
+
+        HAL_Delay(APP_I2C_DELAY_BETWEEN_FRAME_MS);
     }
 
-    return HAL_I2C_Master_Transmit(s_hi2c,
-                                   (uint16_t)(s_slave_addr_7bit << 1U),
-                                   (uint8_t *)frame,
-                                   length,
-                                   s_timeout_ms);
-}
-
-uint8_t AppI2CvsESP32_MakeControlFlags(uint8_t blink_yel_ena1,
-                                        uint8_t blink_yel_ena2,
-                                        uint8_t thaco_blink,
-                                        uint8_t cao_diem_ena)
-{
-    uint8_t flags = 0U;
-
-    if ((blink_yel_ena1 & 0x01U) != 0U)
-    {
-        flags |= APP_I2CVSESP32_FLAG_BLINK_YEL_ENA1;
-    }
-
-    if ((blink_yel_ena2 & 0x01U) != 0U)
-    {
-        flags |= APP_I2CVSESP32_FLAG_BLINK_YEL_ENA2;
-    }
-
-    if ((thaco_blink & 0x01U) != 0U)
-    {
-        flags |= APP_I2CVSESP32_FLAG_THACO_BLINK;
-    }
-
-    if ((cao_diem_ena & 0x01U) != 0U)
-    {
-        flags |= APP_I2CVSESP32_FLAG_CAO_DIEM_ENA;
-    }
-
-    return flags;
-}
-
-void AppI2CvsESP32_Init(const AppI2CvsESP32_Config_t *config)
-{
-    if (config == NULL)
-    {
-        return;
-    }
-
-    s_hi2c = config->hi2c;
-    s_slave_addr_7bit = config->slave_addr_7bit;
-    s_timeout_ms = config->timeout_ms;
-
-    (void)memset(s_tx_realtime_frame, 0, sizeof(s_tx_realtime_frame));
-    (void)memset(s_tx_normal_frame, 0, sizeof(s_tx_normal_frame));
-    (void)memset(s_tx_peak_frame, 0, sizeof(s_tx_peak_frame));
-}
-
-void AppI2CvsESP32_SetCounter(uint8_t counter)
-{
-    s_frame_counter = counter;
-}
-
-uint8_t AppI2CvsESP32_GetCounter(void)
-{
-    return s_frame_counter;
-}
-
-void AppI2CvsESP32_BuildRealtime(uint8_t frame[APP_I2CVSESP32_REALTIME_FRAME_SIZE],
-                                 const AppI2CvsESP32_RealtimePayload_t *payload,
-                                 uint8_t counter)
-{
-    if ((frame == NULL) || (payload == NULL))
-    {
-        return;
-    }
-
-    frame[0]  = APP_I2CVSESP32_CMD_REALTIME;
-    frame[1]  = payload->date;
-    frame[2]  = payload->month;
-    frame[3]  = payload->year;
-    frame[4]  = payload->hour;
-    frame[5]  = payload->minute;
-    frame[6]  = payload->second;
-    frame[7]  = payload->voltage1;
-    frame[8]  = payload->voltage2;
-    frame[9]  = payload->current1;
-    frame[10] = payload->current2;
-    frame[11] = payload->begin_hour1;
-    frame[12] = payload->begin_min1;
-    frame[13] = payload->end_hour1;
-    frame[14] = payload->end_min1;
-    frame[APP_I2CVSESP32_REALTIME_COUNTER_INDEX] = counter;
-    frame[APP_I2CVSESP32_REALTIME_CRC_INDEX] = crc8_cal(frame, APP_I2CVSESP32_REALTIME_CRC_INDEX);
-}
-
-void AppI2CvsESP32_BuildNormalSetting(uint8_t frame[APP_I2CVSESP32_NORMAL_FRAME_SIZE],
-                                      const AppI2CvsESP32_NormalPayload_t *payload,
-                                      uint8_t counter)
-{
-    if ((frame == NULL) || (payload == NULL))
-    {
-        return;
-    }
-
-    frame[0]  = APP_I2CVSESP32_CMD_NORMAL_SETTING;
-    frame[1]  = payload->control_flags;
-    frame[2]  = payload->x1;
-    frame[3]  = payload->v1;
-    frame[4]  = payload->gt1;
-    frame[5]  = payload->x2;
-    frame[6]  = payload->v2;
-    frame[7]  = payload->gt2;
-    frame[8]  = payload->x3;
-    frame[9]  = payload->v3;
-    frame[10] = payload->gt3;
-    frame[11] = payload->begin_hour2;
-    frame[12] = payload->begin_min2;
-    frame[13] = payload->end_hour2;
-    frame[14] = payload->end_min2;
-    frame[APP_I2CVSESP32_NORMAL_COUNTER_INDEX] = counter;
-    frame[APP_I2CVSESP32_NORMAL_CRC_INDEX] = crc8_cal(frame, APP_I2CVSESP32_NORMAL_CRC_INDEX);
-}
-
-void AppI2CvsESP32_BuildPeakSetting(uint8_t frame[APP_I2CVSESP32_PEAK_FRAME_SIZE],
-                                    const AppI2CvsESP32_PeakPayload_t *payload,
-                                    uint8_t counter)
-{
-    if ((frame == NULL) || (payload == NULL))
-    {
-        return;
-    }
-
-    frame[0]  = APP_I2CVSESP32_CMD_PEAK_SETTING;
-    frame[1]  = payload->begin_hour3;
-    frame[2]  = payload->begin_min3;
-    frame[3]  = payload->end_hour3;
-    frame[4]  = payload->end_min3;
-    frame[5]  = payload->peak_x1;
-    frame[6]  = payload->peak_v1;
-    frame[7]  = payload->peak_gt1;
-    frame[8]  = payload->peak_x2;
-    frame[9]  = payload->peak_v2;
-    frame[10] = payload->peak_gt2;
-    frame[11] = payload->peak_x3;
-    frame[12] = payload->peak_v3;
-    frame[13] = payload->peak_gt3;
-    frame[APP_I2CVSESP32_PEAK_COUNTER_INDEX] = counter;
-    frame[APP_I2CVSESP32_PEAK_CRC_INDEX] = crc8_cal(frame, APP_I2CVSESP32_PEAK_CRC_INDEX);
-}
-
-HAL_StatusTypeDef AppI2CvsESP32_SendRealtime(const AppI2CvsESP32_RealtimePayload_t *payload)
-{
-    if (payload == NULL)
-    {
-        return HAL_ERROR;
-    }
-
-    AppI2CvsESP32_BuildRealtime(s_tx_realtime_frame, payload, AppI2CvsESP32_NextCounter());
-
-    return AppI2CvsESP32_Transmit(s_tx_realtime_frame, APP_I2CVSESP32_REALTIME_FRAME_SIZE);
-}
-
-HAL_StatusTypeDef AppI2CvsESP32_SendNormalSetting(const AppI2CvsESP32_NormalPayload_t *payload)
-{
-    if (payload == NULL)
-    {
-        return HAL_ERROR;
-    }
-
-    AppI2CvsESP32_BuildNormalSetting(s_tx_normal_frame, payload, AppI2CvsESP32_NextCounter());
-
-    return AppI2CvsESP32_Transmit(s_tx_normal_frame, APP_I2CVSESP32_NORMAL_FRAME_SIZE);
-}
-
-HAL_StatusTypeDef AppI2CvsESP32_SendPeakSetting(const AppI2CvsESP32_PeakPayload_t *payload)
-{
-    if (payload == NULL)
-    {
-        return HAL_ERROR;
-    }
-
-    AppI2CvsESP32_BuildPeakSetting(s_tx_peak_frame, payload, AppI2CvsESP32_NextCounter());
-
-    return AppI2CvsESP32_Transmit(s_tx_peak_frame, APP_I2CVSESP32_PEAK_FRAME_SIZE);
-}
-
-HAL_StatusTypeDef AppI2CvsESP32_SendAll(const AppI2CvsESP32_Payload_t *payload)
-{
-    HAL_StatusTypeDef status;
-    uint8_t counter;
-
-    if (payload == NULL)
-    {
-        return HAL_ERROR;
-    }
-
-    /* One counter value is shared by all 3 frames in the same send cycle. */
-    counter = AppI2CvsESP32_NextCounter();
-
-    AppI2CvsESP32_BuildRealtime(s_tx_realtime_frame, &payload->realtime, counter);
-    status = AppI2CvsESP32_Transmit(s_tx_realtime_frame, APP_I2CVSESP32_REALTIME_FRAME_SIZE);
-    if (status != HAL_OK)
-    {
-        return status;
-    }
-
-    HAL_Delay(APP_I2CVSESP32_INTER_FRAME_DELAY_MS);
-
-    AppI2CvsESP32_BuildNormalSetting(s_tx_normal_frame, &payload->normal, counter);
-    status = AppI2CvsESP32_Transmit(s_tx_normal_frame, APP_I2CVSESP32_NORMAL_FRAME_SIZE);
-    if (status != HAL_OK)
-    {
-        return status;
-    }
-
-    HAL_Delay(APP_I2CVSESP32_INTER_FRAME_DELAY_MS);
-
-    AppI2CvsESP32_BuildPeakSetting(s_tx_peak_frame, &payload->peak, counter);
-    status = AppI2CvsESP32_Transmit(s_tx_peak_frame, APP_I2CVSESP32_PEAK_FRAME_SIZE);
-
-    return status;
+    packet_counter++;
 }

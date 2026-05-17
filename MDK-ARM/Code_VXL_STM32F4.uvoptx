@@ -163,97 +163,82 @@
         <Ww>
           <count>1</count>
           <WinNumber>1</WinNumber>
-          <ItemText>myFlashData</ItemText>
+          <ItemText>I1_F,0x0A</ItemText>
         </Ww>
         <Ww>
           <count>2</count>
           <WinNumber>1</WinNumber>
-          <ItemText>HMI_initValue_count,0x0A</ItemText>
+          <ItemText>I2_F,0x0A</ItemText>
         </Ww>
         <Ww>
           <count>3</count>
           <WinNumber>1</WinNumber>
-          <ItemText>I1_F,0x0A</ItemText>
+          <ItemText>I3_F,0x0A</ItemText>
         </Ww>
         <Ww>
           <count>4</count>
           <WinNumber>1</WinNumber>
-          <ItemText>I2_F,0x0A</ItemText>
+          <ItemText>I4_F,0x0A</ItemText>
         </Ww>
         <Ww>
           <count>5</count>
           <WinNumber>1</WinNumber>
-          <ItemText>I3_F,0x0A</ItemText>
+          <ItemText>I5_F,0x0A</ItemText>
         </Ww>
         <Ww>
           <count>6</count>
           <WinNumber>1</WinNumber>
-          <ItemText>I4_F,0x0A</ItemText>
+          <ItemText>ResetRTC_count,0x0A</ItemText>
         </Ww>
         <Ww>
           <count>7</count>
           <WinNumber>1</WinNumber>
-          <ItemText>I5_F,0x0A</ItemText>
+          <ItemText>I1_F,0x0A</ItemText>
         </Ww>
         <Ww>
           <count>8</count>
           <WinNumber>1</WinNumber>
-          <ItemText>payload,0x0A</ItemText>
+          <ItemText>I2_F,0x0A</ItemText>
         </Ww>
         <Ww>
           <count>9</count>
           <WinNumber>1</WinNumber>
-          <ItemText>BlinkYel_ENA1</ItemText>
+          <ItemText>I3_F,0x0A</ItemText>
         </Ww>
         <Ww>
           <count>10</count>
           <WinNumber>1</WinNumber>
-          <ItemText>BlinkYel_ENA2</ItemText>
+          <ItemText>I4_F,0x0A</ItemText>
         </Ww>
         <Ww>
           <count>11</count>
           <WinNumber>1</WinNumber>
-          <ItemText>Thaco_Blink</ItemText>
+          <ItemText>I5_F,0x0A</ItemText>
         </Ww>
         <Ww>
           <count>12</count>
           <WinNumber>1</WinNumber>
-          <ItemText>CaoDiem_ENA</ItemText>
+          <ItemText>g_dgtData,0x0A</ItemText>
         </Ww>
         <Ww>
           <count>13</count>
           <WinNumber>1</WinNumber>
-          <ItemText>payload.normal.control_flags</ItemText>
+          <ItemText>s_CurrentPhase,0x0A</ItemText>
         </Ww>
         <Ww>
           <count>14</count>
           <WinNumber>1</WinNumber>
-          <ItemText>s_init_value_count,0x0A</ItemText>
+          <ItemText>input_ok,0x0A</ItemText>
         </Ww>
         <Ww>
           <count>15</count>
           <WinNumber>1</WinNumber>
-          <ItemText>AppWeconHMI_REG_begin_hour1</ItemText>
+          <ItemText>g_dgt_count/10000,0x0A</ItemText>
         </Ww>
         <Ww>
           <count>16</count>
           <WinNumber>1</WinNumber>
-          <ItemText>ResetRTC_count,0x0A</ItemText>
-        </Ww>
-        <Ww>
-          <count>17</count>
-          <WinNumber>1</WinNumber>
-          <ItemText>X1,0x0A</ItemText>
-        </Ww>
-        <Ww>
-          <count>18</count>
-          <WinNumber>1</WinNumber>
-          <ItemText>V1,0x0A</ItemText>
-        </Ww>
-        <Ww>
-          <count>19</count>
-          <WinNumber>1</WinNumber>
-          <ItemText>GT1,0x0A</ItemText>
+          <ItemText>status,0x0A</ItemText>
         </Ww>
       </WatchWindow1>
       <MemoryWindow1>

@@ -1,62 +1,43 @@
+/**
+  ******************************************************************************
+  * @file    app_WeconHMI.c
+  * @author  Suu Nguyen Van - FPT Company 0971346938
+  * @version V1.0
+  * @date    14-05-2026
+  * @brief   source file for flash application.
+  ******************************************************************************
+  */
+
 #include "app_WeconHMI.h"
+#include "app_flash.h"
 
-#define APP_WECON_HMI_INIT_MAX_COUNT  2000u
-#define APP_WECON_HMI_FLASH_ADD0   0x08020080
+#define APP_WECON_HMI_INIT_MAX_COUNT    (2000u)
+#define APP_WECON_HMI_FLASH_ADD0        (0x08020080)
+#define APP_WECON_HMI_g_input_ok_MAX      (1000u) /* 10s */
 
-static uint16_t s_init_value_count = 0u;
-
-/* Traffic light normal settings */
-extern uint16_t X1;
-extern uint16_t V1;
-extern uint16_t GT1;
-extern uint16_t GT2;
-extern uint16_t Xanh1;
-extern uint16_t Vang1;
-extern uint16_t GiaiToa1;
-extern uint16_t Xanh2;
-extern uint16_t Vang2;
-extern uint16_t GiaiToa2;
-extern uint8_t begin_hour1;
-extern uint8_t begin_min1;
-extern uint8_t end_hour1;
-extern uint8_t end_min1;
-extern uint8_t BlinkYel_ENA1;
-extern uint32_t Total_Time;
-
-/* Peak-hour settings */
-extern uint16_t CaoDiem_X1;
-extern uint16_t CaoDiem_V1;
-extern uint16_t CaoDiem_GT1;
-extern uint16_t CaoDiem_X2;
-extern uint16_t CaoDiem_V2;
-extern uint16_t CaoDiem_GT2;
-extern uint8_t begin_hour3;
-extern uint8_t begin_min3;
-extern uint8_t end_hour3;
-extern uint8_t end_min3;
-extern uint8_t CaoDiem_ENA;
-extern uint32_t CaoDiem_Total_Time;
-
-/* Blink-yellow 2 / Thaco settings */
-extern uint8_t begin_hour2;
-extern uint8_t begin_min2;
-extern uint8_t end_hour2;
-extern uint8_t end_min2;
-extern uint8_t BlinkYel_ENA2;
-extern uint8_t Thaco_Blink;
-
+/* External configuration ----------------------------------------------------*/
 extern RTC_TimeTypeDef setTime;
 extern RTC_DateTypeDef setDate;
-extern uint16_t input_ok;
-extern uint16_t ResetRTC_count;
-extern uint32_t myFlashData[10];
+extern RTC_TimeTypeDef getTime;
+extern RTC_DateTypeDef getDate;
+extern RTC_HandleTypeDef hrtc;
+extern uint16_t g_input_ok;
+extern uint16_t g_ResetRTC_count;
+extern uint16_t g_realTime_m;
+extern uint16_t g_realTime_h;
 
+/* Private variables ---------------------------------------------------------*/
+static uint16_t s_init_value_count = 0u;
+
+/* Private functions ---------------------------------------------------------*/
+
+/* Public functions ---------------------------------------------------------*/
 void AppWeconHMI_ResetInitValues(void)
 {
     s_init_value_count = 0u;
 }
 
-void AppWeconHMI_InitValues(uint16_t regbank[][APP_RS485_REG_PER_GROUP])
+void AppWeconHMI_InitValues(uint16_t regbank[][APP_RS485_REG_PER_GROUP], DGT_Settings_t *s)
 {
     if (regbank == 0)
     {
@@ -70,45 +51,58 @@ void AppWeconHMI_InitValues(uint16_t regbank[][APP_RS485_REG_PER_GROUP])
 
     s_init_value_count++;
 
-    regbank[2][AppWeconHMI_REG_X1]      = Xanh1;       /* xanh 1 */
-    regbank[2][AppWeconHMI_REG_V1]      = Vang1;       /* vang 1 */
-    regbank[2][AppWeconHMI_REG_GT1]     = GiaiToa1;    /* giai toa 1 */
-    regbank[2][AppWeconHMI_REG_X2]      = Xanh2;       /* xanh 2 */
-    regbank[2][AppWeconHMI_REG_V2]      = Vang2;       /* vang 2 */
-    regbank[2][AppWeconHMI_REG_GT2]     = GiaiToa2;    /* giai toa 2 */
-    /* regbank[2][AppWeconHMI_REG_X3]   = Xanh3; */
-    /* regbank[2][AppWeconHMI_REG_V3]   = Vang3; */
-    /* regbank[2][AppWeconHMI_REG_GT3]  = GiaiToa3; */
-    regbank[2][AppWeconHMI_REG_begin_hour1]     = begin_hour1;
-    regbank[2][AppWeconHMI_REG_begin_min1]      = begin_min1;
-    regbank[2][AppWeconHMI_REG_end_hour1]       = end_hour1;
-    regbank[2][AppWeconHMI_REG_end_min1]        = end_min1;
-    regbank[0][AppWeconHMI_BIT_BlinkYel_ENA1]   = BlinkYel_ENA1;
-    Total_Time = X1 + V1 + GT1 + GT2;
+    regbank[2][AppWeconHMI_REG_X1]      = s->normal.phase1.x;       /* xanh 1 */
+    regbank[2][AppWeconHMI_REG_V1]      = s->normal.phase1.v;       /* vang 1 */
+    regbank[2][AppWeconHMI_REG_GT1]     = s->normal.phase1.gt;    /* giai toa 1 */
+    regbank[2][AppWeconHMI_REG_X2]      = s->normal.phase2.x;       /* xanh 2 */
+    regbank[2][AppWeconHMI_REG_V2]      = s->normal.phase2.v;       /* vang 2 */
+    regbank[2][AppWeconHMI_REG_GT2]     = s->normal.phase2.gt;    /* giai toa 2 */
+    /* regbank[2][AppWeconHMI_REG_X3]   = s->normal.phase3.x; */
+    /* regbank[2][AppWeconHMI_REG_V3]   = s->normal.phase3.v; */
+    /* regbank[2][AppWeconHMI_REG_GT3]  = s->normal.phase3.gt; */
+    regbank[2][AppWeconHMI_REG_begin_hour1]     = s->BlinkYel1_OnTime.start_h;
+    regbank[2][AppWeconHMI_REG_begin_min1]      = s->BlinkYel1_OnTime.start_m;
+    regbank[2][AppWeconHMI_REG_end_hour1]       = s->BlinkYel1_OnTime.end_h;
+    regbank[2][AppWeconHMI_REG_end_min1]        = s->BlinkYel1_OnTime.end_m;
+    regbank[0][AppWeconHMI_BIT_BlinkYel_ENA1]   = s->BlinkYel1_OnTime.flag;
 
-    regbank[2][AppWeconHMI_REG_CaoDiem_X1] = CaoDiem_X1;   /* xanh 1 */
-    regbank[2][AppWeconHMI_REG_CaoDiem_V1] = CaoDiem_V1;   /* vang 1 */
-    regbank[2][AppWeconHMI_REG_CaoDiem_GT1] = CaoDiem_GT1;  /* giai toa 1 */
-    regbank[2][AppWeconHMI_REG_CaoDiem_X2] = CaoDiem_X2;   /* xanh 2 */
-    regbank[2][AppWeconHMI_REG_CaoDiem_V2] = CaoDiem_V2;   /* vang 2 */
-    regbank[2][AppWeconHMI_REG_CaoDiem_GT2] = CaoDiem_GT2;  /* giai toa 2 */
-    /* regbank[2][AppWeconHMI_REG_CaoDiem_X3] = CaoDiem_X3; */
-    /* regbank[2][AppWeconHMI_REG_CaoDiem_V3] = CaoDiem_V3; */
-    /* regbank[2][AppWeconHMI_REG_CaoDiem_GT3] = CaoDiem_GT3; */
-    regbank[2][AppWeconHMI_REG_begin_hour3]     = begin_hour3;
-    regbank[2][AppWeconHMI_REG_begin_min3]      = begin_min3;
-    regbank[2][AppWeconHMI_REG_end_hour3]       = end_hour3;
-    regbank[2][AppWeconHMI_REG_end_min3]        = end_min3;
-    regbank[0][AppWeconHMI_BIT_CaoDiem_ENA]     = CaoDiem_ENA;
-    CaoDiem_Total_Time = CaoDiem_X2 + CaoDiem_V2 + CaoDiem_GT1 + CaoDiem_GT2;
+    regbank[2][AppWeconHMI_REG_peak1_X1]    = s->peak1.phase1.x;   /* xanh 1 */
+    regbank[2][AppWeconHMI_REG_peak1_V1]    = s->peak1.phase1.v;   /* vang 1 */
+    regbank[2][AppWeconHMI_REG_peak1_GT1]   = s->peak1.phase1.gt;  /* giai toa 1 */
+    regbank[2][AppWeconHMI_REG_peak1_X2]    = s->peak1.phase2.x;   /* xanh 2 */
+    regbank[2][AppWeconHMI_REG_peak1_V2]    = s->peak1.phase2.v;   /* vang 2 */
+    regbank[2][AppWeconHMI_REG_peak1_GT2]   = s->peak1.phase2.gt;  /* giai toa 2 */
+    /* regbank[2][AppWeconHMI_REG_peak1_X3] = s->peak1.phase3.x; */
+    /* regbank[2][AppWeconHMI_REG_peak1_V3] = s->peak1.phase3.v; */
+    /* regbank[2][AppWeconHMI_REG_peak1_GT3]= s->peak1.phase3.gt; */
+    regbank[2][AppWeconHMI_REG_peak1_start_h] = s->peak1_OnTime.start_h;
+    regbank[2][AppWeconHMI_REG_peak1_start_m] = s->peak1_OnTime.start_m;
+    regbank[2][AppWeconHMI_REG_peak1_end_h]   = s->peak1_OnTime.end_h;
+    regbank[2][AppWeconHMI_REG_peak1_end_m]   = s->peak1_OnTime.end_m;
+    regbank[0][AppWeconHMI_BIT_peak1_ENA]     = s->peak1_OnTime.flag;
+    
+    regbank[2][AppWeconHMI_REG_peak2_X1]    = s->peak2.phase1.x;   /* xanh 1 */
+    regbank[2][AppWeconHMI_REG_peak2_V1]    = s->peak2.phase1.v;   /* vang 1 */
+    regbank[2][AppWeconHMI_REG_peak2_GT1]   = s->peak2.phase1.gt;  /* giai toa 1 */
+    regbank[2][AppWeconHMI_REG_peak2_X2]    = s->peak2.phase2.x;   /* xanh 2 */
+    regbank[2][AppWeconHMI_REG_peak2_V2]    = s->peak2.phase2.v;   /* vang 2 */
+    regbank[2][AppWeconHMI_REG_peak2_GT2]   = s->peak2.phase2.gt;  /* giai toa 2 */
+    /* regbank[2][AppWeconHMI_REG_peak2_X3] = s->peak2.phase3.x; */
+    /* regbank[2][AppWeconHMI_REG_peak2_V3] = s->peak2.phase3.v; */
+    /* regbank[2][AppWeconHMI_REG_peak2_GT3]= s->peak2.phase3.gt; */
+    regbank[2][AppWeconHMI_REG_peak2_start_h] = s->peak2_OnTime.start_h;
+    regbank[2][AppWeconHMI_REG_peak2_start_m] = s->peak2_OnTime.start_m;
+    regbank[2][AppWeconHMI_REG_peak2_end_h]   = s->peak2_OnTime.end_h;
+    regbank[2][AppWeconHMI_REG_peak2_end_m]   = s->peak2_OnTime.end_m;
+    regbank[0][AppWeconHMI_BIT_peak2_ENA]     = s->peak2_OnTime.flag;
 
-    regbank[2][AppWeconHMI_REG_begin_hour2]     = begin_hour2;
-    regbank[2][AppWeconHMI_REG_begin_min2]      = begin_min2;
-    regbank[2][AppWeconHMI_REG_end_hour2]       = end_hour2;
-    regbank[2][AppWeconHMI_REG_end_min2]        = end_min2;
-    regbank[0][AppWeconHMI_BIT_BlinkYel_ENA2]   = BlinkYel_ENA2;
+    regbank[2][AppWeconHMI_REG_BlinkYel2_start_h]= s->BlinkYel2_OnTime.start_h;
+    regbank[2][AppWeconHMI_REG_BlinkYel2_start_m]= s->BlinkYel2_OnTime.start_m;
+    regbank[2][AppWeconHMI_REG_BlinkYel2_end_h]  = s->BlinkYel2_OnTime.end_h;
+    regbank[2][AppWeconHMI_REG_BlinkYel2_end_m]  = s->BlinkYel2_OnTime.end_m;
+    regbank[0][AppWeconHMI_BIT_BlinkYel2_flag]   = s->BlinkYel2_OnTime.flag;
 
-    regbank[0][AppWeconHMI_BIT_Thaco_Blink]      = Thaco_Blink;
+    regbank[0][AppWeconHMI_BIT_Thaco_Blink_flag] = s->Thaco_Blink_flag;
 }
 
 void AppWeconHMI_resetInputRTCVars(uint16_t regbank[][APP_RS485_REG_PER_GROUP]){// reset input RTC variables, check HMI background script
@@ -132,7 +126,7 @@ void AppWeconHMI_sendRTCtoHMI(uint16_t regbank[][APP_RS485_REG_PER_GROUP], RTC_T
 }
 
 void AppWeconHMI_setTimeToRTC(uint16_t regbank[][APP_RS485_REG_PER_GROUP], RTC_HandleTypeDef source_hrtc){
-    setTime.Hours 	= regbank[2][AppWeconHMI_REG_setTime_Hours];
+  setTime.Hours 	= regbank[2][AppWeconHMI_REG_setTime_Hours];
 	setTime.Minutes = regbank[2][AppWeconHMI_REG_setTime_Minutes];
 	setTime.Seconds = regbank[2][AppWeconHMI_REG_setTime_Seconds];
 	setTime.DayLightSaving = RTC_DAYLIGHTSAVING_NONE;
@@ -148,59 +142,134 @@ void AppWeconHMI_setTimeToRTC(uint16_t regbank[][APP_RS485_REG_PER_GROUP], RTC_H
 	HAL_RTC_SetDate(&source_hrtc, &setDate, RTC_FORMAT_BIN);
 	
 	HAL_RTCEx_BKUPWrite(&source_hrtc, RTC_BKP_DR1, 0x12);
-	// inform input_ok
-	regbank[0][AppWeconHMI_BIT_SET_TIME_RTC] = 0;
+	// inform g_input_ok
+	regbank[0][AppWeconHMI_BIT_setTime_SAVE] = 0;
 	regbank[0][AppWeconHMI_BIT_inputOk]     = 1;
-	input_ok = 0;
-	ResetRTC_count = 0;
+	g_input_ok = 0;
+	g_ResetRTC_count = 0;
 }
 
-void AppWeconHMI_SettingScreen1(uint16_t regbank[][APP_RS485_REG_PER_GROUP]){
-//     Xanh1	    = regbank[2][AppWeconHMI_REG_X1];	// xanh 1
-// 	Vang1	    = regbank[2][AppWeconHMI_REG_V1];	// vang 1
-// 	GiaiToa1  = regbank[2][AppWeconHMI_REG_GT1];	// giai toa 1
-					
-// 	Xanh2	 = regbank[2][AppWeconHMI_REG_X2];	// xanh 2 
-// 	Vang2	 = regbank[2][AppWeconHMI_REG_V2];	// vang 2
-// 	GiaiToa2 = regbank[2][AppWeconHMI_REG_GT2];	// giai toa 2
-					
-// //	X3 = regbank[2][AppWeconHMI_REG_X3];	// xanh 3
-// //	V3 = regbank[2][AppWeconHMI_REG_V3];	// vang 3
-// //	GT3= regbank[2][AppWeconHMI_REG_GT3];	// giai toa 3
-	
-// 	begin_hour1		= (uint8_t)regbank[2][AppWeconHMI_REG_begin_hour1];
-// 	begin_min1		= (uint8_t)regbank[2][AppWeconHMI_REG_begin_min1];
-// 	end_hour1		= (uint8_t)regbank[2][AppWeconHMI_REG_end_hour1];
-// 	end_min1		= (uint8_t)regbank[2][AppWeconHMI_REG_end_min1];
-// 	BlinkYel_ENA1	= (uint8_t)regbank[0][AppWeconHMI_BIT_BlinkYel_ENA1];
-	
-// 	// Read from flash
-// 	Flash_GetData(APP_WECON_HMI_FLASH_ADD0, &myFlashData[0], 10);
-	
-// 	// Write to flash
-// 	myFlashData[0] = regbank[2][120];							// xanh 1
-// 	myFlashData[0] = (myFlashData[0]) << 8 | regbank[2][121];	// vang 1
-// 	myFlashData[0] = (myFlashData[0]) << 8 | regbank[2][122];	// giai toa 1						
-// 	myFlashData[0] = (myFlashData[0]) << 8 | regbank[2][123];	// xanh 2 
-// 	myFlashData[1] = regbank[2][124];							// vang 2
-// 	myFlashData[1] = (myFlashData[1]) << 8 | regbank[2][125];	// giai toa 2
-// 	myFlashData[1] = (myFlashData[1]) << 8 | 0xDD;					// xanh 3
-// 	myFlashData[1] = (myFlashData[1]) << 8 | 0xDD;					// vang 3
-// 	myFlashData[2] = 0xDD;											// giai toa 3
-// 	myFlashData[2] = (myFlashData[2]) << 8 | begin_hour1;			// begin_hour1
-// 	myFlashData[2] = (myFlashData[2]) << 8 | begin_min1;			// begin_min1
-// 	myFlashData[2] = (myFlashData[2]) << 8 | end_hour1;				// end_hour1
-// 	myFlashData[3] = end_min1;										// end_min1
-// 	myFlashData[3] = (myFlashData[3]) << 8 | BlinkYel_ENA1;			// BlinkYel_ENA1
-// 	myFlashData[3] = (myFlashData[3]) << 8 | 0xEE;					// Dummy
-// 	myFlashData[3] = (myFlashData[3]) << 8 | 0xEE;					// Dummy
-	
-// 	Flash_WriteData(APP_WECON_HMI_FLASH_ADD0, &myFlashData[0], 10);
-	
-// 	Total_Time = Xanh1 + Vang1 + GiaiToa1 + GiaiToa2;
-	
-// 	// inform input_ok
-// 	regbank[0][94] = 0;
-// 	regbank[0][AppWeconHMI_BIT_inputOk] = 1;
-// 	input_ok = 0;
+void AppWeconHMI_NormalSetting(uint16_t regbank[][APP_RS485_REG_PER_GROUP], DGT_Settings_t *s){
+// waitttttt
+}
+
+
+void AppWeconHMI_Process(uint16_t regbank[][APP_RS485_REG_PER_GROUP], DGT_Settings_t *s){
+    if (g_input_ok >= APP_WECON_HMI_g_input_ok_MAX){// reset thong bao nhap thoi gian ok
+      regbank[0][AppWeconHMI_BIT_inputOk]=0;
+      g_input_ok=0;
+    }
+    
+    AppWeconHMI_InitValues(regbank, s);
+    AppWeconHMI_sendRTCtoHMI(regbank, getTime, getDate);
+
+    if ((regbank[0][AppWeconHMI_BIT_getTime_HMI] == 1) && (g_ResetRTC_count == 0xFFFF)) g_ResetRTC_count = 0;
+    if ((g_ResetRTC_count >= 5900) && (g_ResetRTC_count <= 6000)) {// reset input RTC variables after 1 minute, check HMI background script
+      g_ResetRTC_count = 0xFFFF;
+      AppWeconHMI_resetInputRTCVars(regbank);
+    }
+
+    if (regbank[0][AppWeconHMI_BIT_setTime_SAVE] == 1){////// SET time to RTC
+      AppWeconHMI_setTimeToRTC(regbank, hrtc);
+    }
+
+    if (regbank[0][AppWeconHMI_BIT_NORMAL_SAVE] == 1){////// SET Data (Setting 1) -- 14 byte -- Normal setting
+        s->normal.phase1.x             = (uint8_t)regbank[2][AppWeconHMI_REG_X1];	// xanh 1
+        s->normal.phase1.v             = (uint8_t)regbank[2][AppWeconHMI_REG_V1];	// vang 1
+        s->normal.phase1.gt            = (uint8_t)regbank[2][AppWeconHMI_REG_GT1];	// giai toa 1
+        s->normal.phase2.x             = (uint8_t)regbank[2][AppWeconHMI_REG_X2];	// xanh 2
+        s->normal.phase2.v             = (uint8_t)regbank[2][AppWeconHMI_REG_V2];	// vang 2
+        s->normal.phase2.gt            = (uint8_t)regbank[2][AppWeconHMI_REG_GT2];	// giai toa 2
+        // s->normal.phase3.x             = (uint8_t)regbank[2][AppWeconHMI_REG_X3];	// xanh 3
+        // s->normal.phase3.v             = (uint8_t)regbank[2][AppWeconHMI_REG_V3];	// vang 3
+        // s->normal.phase3.gt            = (uint8_t)regbank[2][AppWeconHMI_REG_GT3];	// giai toa 3
+        s->BlinkYel1_OnTime.flag       = (uint8_t)regbank[0][AppWeconHMI_BIT_BlinkYel_ENA1];
+        s->BlinkYel1_OnTime.start_h    = (uint8_t)regbank[2][AppWeconHMI_REG_begin_hour1];
+        s->BlinkYel1_OnTime.start_m    = (uint8_t)regbank[2][AppWeconHMI_REG_begin_min1];
+        s->BlinkYel1_OnTime.end_h      = (uint8_t)regbank[2][AppWeconHMI_REG_end_hour1];
+        s->BlinkYel1_OnTime.end_m      = (uint8_t)regbank[2][AppWeconHMI_REG_end_min1];
+        // Save current settings to Flash app
+        (void)AppFlash_SaveSettings(s);
+        // inform g_input_ok
+        regbank[0][AppWeconHMI_BIT_NORMAL_SAVE] = 0;
+        regbank[0][AppWeconHMI_BIT_inputOk] = 1;
+        g_input_ok = 0;
+    }
+
+    if (regbank[0][AppWeconHMI_BIT_peak1_SAVE] == 1){////// SET Data (Setting_3) -- 14 byte -- Peak1
+      s->peak1.phase1.x = (uint8_t)regbank[2][AppWeconHMI_REG_peak1_X1];	// xanh 1
+      s->peak1.phase1.v = (uint8_t)regbank[2][AppWeconHMI_REG_peak1_V1];	// vang 1
+      s->peak1.phase1.gt = (uint8_t)regbank[2][AppWeconHMI_REG_peak1_GT1];	// giai toa 1
+      s->peak1.phase2.x = (uint8_t)regbank[2][AppWeconHMI_REG_peak1_X2];	// xanh 2
+      s->peak1.phase2.v = (uint8_t)regbank[2][AppWeconHMI_REG_peak1_V2];	// vang 2
+      s->peak1.phase2.gt = (uint8_t)regbank[2][AppWeconHMI_REG_peak1_GT2];	// giai toa 2
+      // s->peak1.phase3.x = (uint8_t)regbank[2][AppWeconHMI_REG_peak1_X3];	// xanh 3
+      // s->peak1.phase3.v = (uint8_t)regbank[2][AppWeconHMI_REG_peak1_V3];	// vang 3
+      // s->peak1.phase3.gt = (uint8_t)regbank[2][AppWeconHMI_REG_peak1_GT3];	// giai toa 3
+      s->peak1_OnTime.flag    = (uint8_t)regbank[0][AppWeconHMI_BIT_peak1_ENA];
+      s->peak1_OnTime.start_h = (uint8_t)regbank[2][AppWeconHMI_REG_peak1_start_h];
+      s->peak1_OnTime.start_m = (uint8_t)regbank[2][AppWeconHMI_REG_peak1_start_m];
+      s->peak1_OnTime.end_h   = (uint8_t)regbank[2][AppWeconHMI_REG_peak1_end_h];
+      s->peak1_OnTime.end_m   = (uint8_t)regbank[2][AppWeconHMI_REG_peak1_end_m];
+
+      // Save current settings to Flash app
+      (void)AppFlash_SaveSettings(s);
+      // inform g_input_ok
+      regbank[0][AppWeconHMI_BIT_peak1_SAVE] = 0;
+      regbank[0][AppWeconHMI_BIT_inputOk] = 1;
+      g_input_ok = 0;
+    }
+
+    if (regbank[0][AppWeconHMI_BIT_peak2_SAVE] == 1){////// SET Data (Setting_5) -- 14 byte -- Peak2
+      s->peak2.phase1.x = (uint8_t)regbank[2][AppWeconHMI_REG_peak2_X1];	// xanh 1
+      s->peak2.phase1.v = (uint8_t)regbank[2][AppWeconHMI_REG_peak2_V1];	// vang 1
+      s->peak2.phase1.gt = (uint8_t)regbank[2][AppWeconHMI_REG_peak2_GT1];	// giai toa 1
+      s->peak2.phase2.x = (uint8_t)regbank[2][AppWeconHMI_REG_peak2_X2];	// xanh 2
+      s->peak2.phase2.v = (uint8_t)regbank[2][AppWeconHMI_REG_peak2_V2];	// vang 2
+      s->peak2.phase2.gt = (uint8_t)regbank[2][AppWeconHMI_REG_peak2_GT2];	// giai toa 2
+      // s->peak2.phase3.x = (uint8_t)regbank[2][AppWeconHMI_REG_peak2_X3];	// xanh 3
+      // s->peak2.phase3.v = (uint8_t)regbank[2][AppWeconHMI_REG_peak2_V3];	// vang 3
+      // s->peak2.phase3.gt = (uint8_t)regbank[2][AppWeconHMI_REG_peak2_GT3];	// giai toa 3
+      s->peak2_OnTime.flag    = (uint8_t)regbank[0][AppWeconHMI_BIT_peak2_ENA];
+      s->peak2_OnTime.start_h = (uint8_t)regbank[2][AppWeconHMI_REG_peak2_start_h];
+      s->peak2_OnTime.start_m = (uint8_t)regbank[2][AppWeconHMI_REG_peak2_start_m];
+      s->peak2_OnTime.end_h   = (uint8_t)regbank[2][AppWeconHMI_REG_peak2_end_h];
+      s->peak2_OnTime.end_m   = (uint8_t)regbank[2][AppWeconHMI_REG_peak2_end_m];
+
+      // Save current settings to Flash app
+      (void)AppFlash_SaveSettings(s);
+      // inform g_input_ok
+      regbank[0][AppWeconHMI_BIT_peak2_SAVE] = 0;
+      regbank[0][AppWeconHMI_BIT_inputOk] = 1;
+      g_input_ok = 0;
+    }
+
+    if (regbank[0][AppWeconHMI_BIT_BlinkYel2_SAVE] == 1){////// SET Data (Setting_2) -- 05 byte -- BlinkYel2
+      s->BlinkYel2_OnTime.flag    = (uint8_t)regbank[0][AppWeconHMI_BIT_BlinkYel2_flag];
+      s->BlinkYel2_OnTime.start_h = (uint8_t)regbank[2][AppWeconHMI_REG_BlinkYel2_start_h];
+      s->BlinkYel2_OnTime.start_m = (uint8_t)regbank[2][AppWeconHMI_REG_BlinkYel2_start_m];
+      s->BlinkYel2_OnTime.end_h   = (uint8_t)regbank[2][AppWeconHMI_REG_BlinkYel2_end_h];
+      s->BlinkYel2_OnTime.end_m   = (uint8_t)regbank[2][AppWeconHMI_REG_BlinkYel2_end_m];
+
+      // Save current settings to Flash app
+      (void)AppFlash_SaveSettings(s);
+      
+      // inform g_input_ok
+      regbank[0][AppWeconHMI_BIT_BlinkYel2_SAVE] = 0;
+      regbank[0][AppWeconHMI_BIT_inputOk] = 1;
+      g_input_ok = 0;
+    }
+
+    if (regbank[0][AppWeconHMI_BIT_Thaco_Blink_flag_SAVE] == 1){////// SET Data (Back Setting) -- 01 byte -- Thaco_Blink
+      // Thaco_Blink = (uint8_t)regbank[0][34];
+      s->Thaco_Blink_flag = (uint8_t)regbank[0][AppWeconHMI_BIT_Thaco_Blink_flag];
+
+      // Save current settings to Flash app
+      (void)AppFlash_SaveSettings(s);
+
+      // inform g_input_ok
+      regbank[0][AppWeconHMI_BIT_Thaco_Blink_flag_SAVE] = 0;
+      regbank[0][AppWeconHMI_BIT_inputOk] = 1;
+      g_input_ok = 0;
+    }
 }

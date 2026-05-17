@@ -23,47 +23,24 @@
 #include "board_io.h"
 #include "app_digital_input.h"
 #include "app_rs485.h"
+#include "app_WeconHMI.h"
 
 /* External configuration ----------------------------------------------------*/
-extern uint16_t X1, V1, GT1;
-extern uint16_t X2, V2, GT2;
-extern uint16_t X3, V3, GT3;
-
-extern uint16_t Xanh1, Vang1, GiaiToa1, Do1;
-extern uint16_t Xanh2, Vang2, GiaiToa2, Do2;
-extern uint16_t Xanh3, Vang3, GiaiToa3, Do3;
-
-extern uint16_t CaoDiem_X1, CaoDiem_V1, CaoDiem_GT1, CaoDiem_D1;
-extern uint16_t CaoDiem_X2, CaoDiem_V2, CaoDiem_GT2, CaoDiem_D2;
-extern uint16_t CaoDiem_X3, CaoDiem_V3, CaoDiem_GT3, CaoDiem_D3;
-
-extern uint8_t BlinkYel_ENA1, BlinkYel_ENA2, Thaco_Blink, CaoDiem_ENA;
-
-extern uint8_t begin_hour1, begin_min1, end_hour1, end_min1; // Chop vang 1
-extern uint8_t begin_hour2, begin_min2, end_hour2, end_min2; // chop vang 2
-extern uint8_t begin_hour3, begin_min3, end_hour3, end_min3; // Cao diem
-
-extern uint16_t hour_realTime, min_realTime;
-extern volatile uint32_t t_count;
-extern volatile uint32_t delay_count;
-
+extern uint16_t g_realTime_h, g_realTime_m;
+extern volatile uint32_t g_dgt_count;
+extern volatile uint32_t g_delay_count;
+extern volatile uint32_t g_Walk_count;
 extern uint8_t I1_F, I2_F, I3_F, I4_F, I5_F;
-extern uint8_t BlinkYel_Auto;
-extern uint8_t Light_Status;
-extern uint32_t Walk_count;
+extern uint8_t g_Light_Status;
+
+/* Private variables ---------------------------------------------------------*/
+static DGT_Phase_t     s_CurrentPhase = {0};
 
 /* Private constants ---------------------------------------------------------*/
 #define APP_DGT_TICK_PER_SECOND       (10000u)
 #define APP_DGT_WALK_BLINK_ON_TIME    (4000u)
 #define APP_DGT_YELLOW_BLINK_PERIOD   (20000u)
 #define APP_DGT_YELLOW_BLINK_ON_TIME  (10000u)
-
-#define APP_DGT_REG_D1                (1u)
-#define APP_DGT_REG_V1                (2u)
-#define APP_DGT_REG_X1                (3u)
-#define APP_DGT_REG_X2                (4u)
-#define APP_DGT_REG_V2                (5u)
-#define APP_DGT_REG_D2                (6u)
 
 /* Private types -------------------------------------------------------------*/
 typedef struct
@@ -93,12 +70,11 @@ typedef struct
 } AppDGT_TimingSource_t;
 
 /* Private function prototypes ----------------------------------------------*/
-static uint32_t AppDGT_ToTick(uint32_t second);
+static uint32_t AppDGT_ToTick(uint8_t second);
 static uint16_t AppDGT_ToMinute(uint8_t hour, uint8_t minute);
 static uint8_t AppDGT_IsTimeInRange(uint16_t now, uint16_t begin, uint16_t end);
-static uint8_t AppDGT_IsPeakTimeActive(void);
-static void AppDGT_ApplyTiming(const AppDGT_TimingSource_t *source);
-static void AppDGT_UpdateTimingByPeakTime(void);
+static uint8_t AppDGT_IsPeakTimeActive(DGT_OnTime_t source);
+static void AppDGT_UpdateTimingByPeakTime(DGT_Settings_t source, DGT_Phase_t *phase);
 static void AppDGT2P_UpdateRegBank(const AppDGT2P_OutputStatus_t *status);
 static void AppDGT2P_SetDirection1Green(void);
 static void AppDGT2P_SetDirection1Yellow(uint8_t walkBlinkOn);
@@ -108,7 +84,7 @@ static void AppDGT2P_SetDirection2Yellow(uint8_t walkBlinkOn);
 static void AppDGT2P_SetDirection2Clear(void);
 
 /* Private functions ---------------------------------------------------------*/
-static uint32_t AppDGT_ToTick(uint32_t second)
+static uint32_t AppDGT_ToTick(uint8_t second)
 {
     return (second * APP_DGT_TICK_PER_SECOND);
 }
@@ -129,94 +105,67 @@ static uint8_t AppDGT_IsTimeInRange(uint16_t now, uint16_t begin, uint16_t end)
     return (uint8_t)((now >= begin) || (now < end));
 }
 
-static uint8_t AppDGT_IsPeakTimeActive(void)
+static uint8_t AppDGT_IsPeakTimeActive(DGT_OnTime_t source)
 {
     uint8_t ret = 0u;
-    const uint16_t now = AppDGT_ToMinute((uint8_t)hour_realTime,
-                                         (uint8_t)min_realTime);
+    const uint16_t now = AppDGT_ToMinute((uint8_t)g_realTime_h,
+                                         (uint8_t)g_realTime_m);
 
-    if (CaoDiem_ENA == 1u)
+    if (g_dgt_count > 50000) // 5s
     {
-        ret = AppDGT_IsTimeInRange(now,
-                                   AppDGT_ToMinute(begin_hour3, begin_min3),
-                                   AppDGT_ToMinute(end_hour3, end_min3));
+        return 0u;
     }
+    
+    if (source.flag == 1u){
+        ret = AppDGT_IsTimeInRange(now,
+                                   AppDGT_ToMinute(source.start_h, source.start_m),
+                                   AppDGT_ToMinute(source.end_h, source.end_m));
+        }
 
     return (uint8_t)(ret != 0u);
 }
 
-static void AppDGT_ApplyTiming(const AppDGT_TimingSource_t *source)
+
+static void AppDGT_UpdateTimingByPeakTime(DGT_Settings_t source, DGT_Phase_t *phase)
 {
-    X1 = source->x1;
-    X2 = source->x2;
-    X3 = source->x3;
-
-    V1 = source->v1;
-    V2 = source->v2;
-    V3 = source->v3;
-
-    GT1 = source->gt1;
-    GT2 = source->gt2;
-    GT3 = source->gt3;
-}
-
-static void AppDGT_UpdateTimingByPeakTime(void)
-{
-    const AppDGT_TimingSource_t normalTiming = {
-        .x1  = Xanh1,
-        .x2  = Xanh2,
-        .x3  = Xanh3,
-        .v1  = Vang1,
-        .v2  = Vang2,
-        .v3  = Vang3,
-        .gt1 = GiaiToa1,
-        .gt2 = GiaiToa2,
-        .gt3 = GiaiToa3,
-    };
-
-    const AppDGT_TimingSource_t peakTiming = {
-        .x1  = CaoDiem_X1,
-        .x2  = CaoDiem_X2,
-        .x3  = CaoDiem_X3,
-        .v1  = CaoDiem_V1,
-        .v2  = CaoDiem_V2,
-        .v3  = CaoDiem_V3,
-        .gt1 = CaoDiem_GT1,
-        .gt2 = CaoDiem_GT2,
-        .gt3 = CaoDiem_GT3,
-    };
-
-    if (AppDGT_IsPeakTimeActive() != 0u)
+    if (g_dgt_count >= 50000) // 5s
     {
-        AppDGT_ApplyTiming(&peakTiming);
+        return;
     }
-    else
+    if (AppDGT_IsPeakTimeActive(source.peak1_OnTime) != 0u)
     {
-        AppDGT_ApplyTiming(&normalTiming);
+        *phase = source.peak1;
+        return;
     }
+    if (AppDGT_IsPeakTimeActive(source.peak2_OnTime) != 0u)
+    {
+        *phase = source.peak2;
+        return;
+    }
+    *phase = source.normal;
 }
 
 static void AppDGT2P_UpdateRegBank(const AppDGT2P_OutputStatus_t *status)
 {
     uint16_t (*regbank)[APP_RS485_REG_PER_GROUP] = AppRs485_GetRegBank();
 
-    regbank[0][APP_DGT_REG_D1] = status->phase1.red;
-    regbank[0][APP_DGT_REG_V1] = status->phase1.yellow;
-    regbank[0][APP_DGT_REG_X1] = status->phase1.green;
-    regbank[0][APP_DGT_REG_X2] = status->phase2.green;
-    regbank[0][APP_DGT_REG_V2] = status->phase2.yellow;
-    regbank[0][APP_DGT_REG_D2] = status->phase2.red;
+    regbank[0][AppWeconHMI_BIT_X1] = status->phase1.green;
+    regbank[0][AppWeconHMI_BIT_V1] = status->phase1.yellow;
+    regbank[0][AppWeconHMI_BIT_D1] = status->phase1.red;
+    regbank[0][AppWeconHMI_BIT_X2] = status->phase2.green;
+    regbank[0][AppWeconHMI_BIT_V2] = status->phase2.yellow;
+    regbank[0][AppWeconHMI_BIT_D2] = status->phase2.red;
 }
 
 static void AppDGT2P_SetDirection1Green(void)
 {
     const AppDGT2P_OutputStatus_t status = {
-        .phase1 = { .red = 1u, .yellow = 0u, .green = 0u },
+        .phase1 = { .red = 0u, .yellow = 0u, .green = 1u },
         .phase2 = { .red = 1u, .yellow = 0u, .green = 0u },
         .phase3 = { 0u },
     };
 
-    D1_0; X1_1; V1_0;
+    D1_0; X1_1; V1_0; Ddb1_1;
     D2_1; X2_0; V2_0;
     Xdb1_0; Xdb2_1;
 
@@ -231,7 +180,7 @@ static void AppDGT2P_SetDirection1Yellow(uint8_t walkBlinkOn)
         .phase3 = { 0u },
     };
 
-    D1_0; X1_0; V1_1;
+    D1_0; X1_0; V1_1; Ddb1_1;
     D2_1; X2_0; V2_0;
 
     if (walkBlinkOn != 0u)
@@ -249,13 +198,13 @@ static void AppDGT2P_SetDirection1Yellow(uint8_t walkBlinkOn)
 static void AppDGT2P_SetDirection1Clear(void)
 {
     const AppDGT2P_OutputStatus_t status = {
-        .phase1 = { .red = 0u, .yellow = 0u, .green = 1u },
+        .phase1 = { .red = 1u, .yellow = 0u, .green = 0u },
         .phase2 = { .red = 1u, .yellow = 0u, .green = 0u },
         .phase3 = { 0u },
     };
 
-    D1_1; X1_0; V1_0;
-    D2_1; X2_0; V2_0;
+    D1_1; X1_0; V1_0; Ddb1_1;
+    D2_1; X2_0; V2_0; Ddb2_1;
 
     AppDGT2P_UpdateRegBank(&status);
 }
@@ -263,13 +212,13 @@ static void AppDGT2P_SetDirection1Clear(void)
 static void AppDGT2P_SetDirection2Green(void)
 {
     const AppDGT2P_OutputStatus_t status = {
-        .phase1 = { .red = 0u, .yellow = 0u, .green = 1u },
+        .phase1 = { .red = 1u, .yellow = 0u, .green = 0u },
         .phase2 = { .red = 0u, .yellow = 0u, .green = 1u },
         .phase3 = { 0u },
     };
 
     D1_1; X1_0; V1_0;
-    D2_0; X2_1; V2_0;
+    D2_0; X2_1; V2_0; Ddb2_1;
     Xdb1_1; Xdb2_0;
 
     AppDGT2P_UpdateRegBank(&status);
@@ -278,13 +227,13 @@ static void AppDGT2P_SetDirection2Green(void)
 static void AppDGT2P_SetDirection2Yellow(uint8_t walkBlinkOn)
 {
     const AppDGT2P_OutputStatus_t status = {
-        .phase1 = { .red = 0u, .yellow = 0u, .green = 1u },
+        .phase1 = { .red = 1u, .yellow = 0u, .green = 0u },
         .phase2 = { .red = 0u, .yellow = 1u, .green = 0u },
         .phase3 = { 0u },
     };
 
     D1_1; X1_0; V1_0;
-    D2_0; X2_0; V2_1;
+    D2_0; X2_0; V2_1; Ddb2_1;
 
     if (walkBlinkOn != 0u)
     {
@@ -301,41 +250,41 @@ static void AppDGT2P_SetDirection2Yellow(uint8_t walkBlinkOn)
 static void AppDGT2P_SetDirection2Clear(void)
 {
     const AppDGT2P_OutputStatus_t status = {
-        .phase1 = { .red = 0u, .yellow = 0u, .green = 1u },
+        .phase1 = { .red = 1u, .yellow = 0u, .green = 0u },
         .phase2 = { .red = 1u, .yellow = 0u, .green = 0u },
         .phase3 = { 0u },
     };
 
-    D1_1; X1_0; V1_0;
-    D2_1; X2_0; V2_0;
+    D1_1; X1_0; V1_0; Ddb1_1;
+    D2_1; X2_0; V2_0; Ddb2_1;
 
     AppDGT2P_UpdateRegBank(&status);
 }
 
 /* Public functions ----------------------------------------------------------*/
-uint8_t AppDGT_BlinkYellowAutoCalculate(void)
+uint8_t AppDGT_BlinkYellowAutoCalculate(DGT_Settings_t s)
 {
     uint8_t ret1 = 0u;
     uint8_t ret2 = 0u;
     uint8_t ret3;
-    const uint16_t now = AppDGT_ToMinute((uint8_t)hour_realTime,
-                                         (uint8_t)min_realTime);
+    const uint16_t now = AppDGT_ToMinute((uint8_t)g_realTime_h,
+                                         (uint8_t)g_realTime_m);
 
-    if (BlinkYel_ENA1 != 0u)
+    if (s.BlinkYel1_OnTime.flag != 0u)
     {
         ret1 = AppDGT_IsTimeInRange(now,
-                                    AppDGT_ToMinute(begin_hour1, begin_min1),
-                                    AppDGT_ToMinute(end_hour1, end_min1));
+                                    AppDGT_ToMinute(s.BlinkYel1_OnTime.start_h, s.BlinkYel1_OnTime.start_m),
+                                    AppDGT_ToMinute(s.BlinkYel1_OnTime.end_h, s.BlinkYel1_OnTime.end_m));
     }
 
-    if (BlinkYel_ENA2 != 0u)
+    if (s.BlinkYel2_OnTime.flag != 0u)
     {
         ret2 = AppDGT_IsTimeInRange(now,
-                                    AppDGT_ToMinute(begin_hour2, begin_min2),
-                                    AppDGT_ToMinute(end_hour2, end_min2));
+                                    AppDGT_ToMinute(s.BlinkYel2_OnTime.start_h, s.BlinkYel2_OnTime.start_m),
+                                    AppDGT_ToMinute(s.BlinkYel2_OnTime.end_h, s.BlinkYel2_OnTime.end_m));
     }
 
-    ret3 = (uint8_t)(Thaco_Blink & 0x01u);
+    ret3 = (uint8_t)(s.Thaco_Blink_flag & 0x01u);
 
     return (uint8_t)((ret1 | ret2 | ret3) != 0u);
 }
@@ -346,23 +295,23 @@ void AppDGT2P_Manual(void)
 
     if (I3_F != 0u)
     {
-        Light_Status = 10u;
+        g_Light_Status = 10u;
         AppDGT2P_SetDirection1Green();
     }
     else
     {
-        Light_Status = 11u;
+        g_Light_Status = 11u;
         AppDGT2P_SetDirection2Green();
     }
 }
 
 void AppDGT2P_BlinkYellow(void)
 {
-    const uint8_t blinkOn = (uint8_t)(((delay_count % APP_DGT_YELLOW_BLINK_PERIOD)
+    const uint8_t blinkOn = (uint8_t)(((g_delay_count % APP_DGT_YELLOW_BLINK_PERIOD)
                                       <= APP_DGT_YELLOW_BLINK_ON_TIME) != 0u);
     AppDGT2P_OutputStatus_t status = { 0u };
 
-    Light_Status = 12u;
+    g_Light_Status = 12u;
 
     D1_0; X1_0; Xdb1_0;
     D2_0; X2_0; Xdb2_0;
@@ -384,12 +333,13 @@ void AppDGT2P_BlinkYellow(void)
     AppDGT2P_UpdateRegBank(&status);
 }
 
-void AppDGT2P_Auto(void)
+void AppDGT2P_Auto(DGT_Settings_t source_Settings, DGT_Phase_t source_currentPhase)
 {
     uint32_t phaseEnd;
     uint8_t walkBlinkOn;
+    static uint8_t BlinkYel_Auto = 0u;
 
-    BlinkYel_Auto = AppDGT_BlinkYellowAutoCalculate();
+    BlinkYel_Auto = AppDGT_BlinkYellowAutoCalculate(source_Settings);
     if (BlinkYel_Auto != 0u)
     {
         AppDGT2P_BlinkYellow();
@@ -398,83 +348,90 @@ void AppDGT2P_Auto(void)
 
     SL_1;
 
-    walkBlinkOn = (uint8_t)((Walk_count <= APP_DGT_WALK_BLINK_ON_TIME) != 0u);
+    walkBlinkOn = (uint8_t)((g_Walk_count <= APP_DGT_WALK_BLINK_ON_TIME) != 0u);
 
     Xdb1_0;
     Xdb2_0;
+    Ddb1_0;
+    Ddb2_0;
 
-    phaseEnd = AppDGT_ToTick(X1);
-    if (t_count <= phaseEnd)
+    phaseEnd = AppDGT_ToTick(source_currentPhase.phase1.x);
+    if (g_dgt_count <= phaseEnd)
     {
-        Light_Status = 1u;
+        g_Light_Status = 1u;
         AppDGT2P_SetDirection1Green();
         return;
     }
 
-    phaseEnd += AppDGT_ToTick(V1);
-    if (t_count <= phaseEnd)
+    phaseEnd += AppDGT_ToTick(source_currentPhase.phase1.v);
+    if (g_dgt_count <= phaseEnd)
     {
-        Light_Status = 2u;
+        g_Light_Status = 2u;
         AppDGT2P_SetDirection1Yellow(walkBlinkOn);
         return;
     }
 
-    phaseEnd += AppDGT_ToTick(GT1);
-    if (t_count <= phaseEnd)
+    phaseEnd += AppDGT_ToTick(source_currentPhase.phase1.gt);
+    if (g_dgt_count <= phaseEnd)
     {
-        Light_Status = 3u;
+        g_Light_Status = 3u;
         AppDGT2P_SetDirection1Clear();
         return;
     }
 
-    phaseEnd += AppDGT_ToTick(X2);
-    if (t_count <= phaseEnd)
+    phaseEnd += AppDGT_ToTick(source_currentPhase.phase2.x);
+    if (g_dgt_count <= phaseEnd)
     {
-        Light_Status = 4u;
+        g_Light_Status = 4u;
         AppDGT2P_SetDirection2Green();
         return;
     }
 
-    phaseEnd += AppDGT_ToTick(V2);
-    if (t_count <= phaseEnd)
+    phaseEnd += AppDGT_ToTick(source_currentPhase.phase2.v);
+    if (g_dgt_count <= phaseEnd)
     {
-        Light_Status = 5u;
+        g_Light_Status = 5u;
         AppDGT2P_SetDirection2Yellow(walkBlinkOn);
         return;
     }
 
-    phaseEnd += AppDGT_ToTick(GT2);
-    if (t_count <= phaseEnd)
+    phaseEnd += AppDGT_ToTick(source_currentPhase.phase2.gt);
+    if (g_dgt_count <= phaseEnd)
     {
-        Light_Status = 6u;
+        g_Light_Status = 6u;
         AppDGT2P_SetDirection2Clear();
         return;
     }
 
-    t_count = 0u;
+    g_dgt_count = 0u;
 }
 
-void AppDGT2P_Process(void)
+void AppDGT2P_Process(DGT_Settings_t *source)
 {
-    AppDGT_UpdateTimingByPeakTime();
-    AppDGT2P_Auto();
-
-    /*
-    if ((I1_F == 1u) && (I2_F == 0u))
-    {
-        AppDGT2P_Auto();
-    }
-    else if ((I1_F == 0u) && (I2_F == 0u))
-    {
-        AppDGT2P_Manual();
-    }
-    else if ((I1_F == 0u) && (I2_F == 1u))
-    {
-        AppDGT2P_BlinkYellow();
-    }
-    else
-    {
-        AppDGT2P_BlinkYellow();
-    }
-    */
+    AppDGT_UpdateTimingByPeakTime(*source, &s_CurrentPhase);
+    
+    #if (AppDGT_test == 1U)
+        AppDGT2P_Auto(*source, s_CurrentPhase);
+    #else
+        if ((I1_F == 1u) && (I2_F == 0u))
+        {
+            AppDGT2P_Auto(*source, s_CurrentPhase);
+        }
+        else if ((I1_F == 0u) && (I2_F == 0u))
+        {
+            AppDGT2P_Manual();
+        }
+        else if ((I1_F == 0u) && (I2_F == 1u))
+        {
+            AppDGT2P_BlinkYellow();
+        }
+        else
+        {
+            AppDGT2P_BlinkYellow();
+        }
+    #endif
+    
+        
+    
+    
 }

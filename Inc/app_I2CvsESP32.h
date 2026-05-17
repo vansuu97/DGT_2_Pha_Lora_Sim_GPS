@@ -1,5 +1,10 @@
-#ifndef APP_I2CVSESP32_H
-#define APP_I2CVSESP32_H
+/**
+ * @file    app_I2CvsESP32.h
+ * @brief   Header for STM32F407 I2C communication to ESP32.
+ */
+
+#ifndef __APP_I2CVSESP32_H
+#define __APP_I2CVSESP32_H
 
 #ifdef __cplusplus
 extern "C" {
@@ -8,215 +13,30 @@ extern "C" {
 #include "main.h"
 #include <stdint.h>
 
-#define APP_I2CVSESP32_ADDR_7BIT              0x12U
+/* ===================== CONFIG ===================== */
 
-#define APP_I2CVSESP32_CMD_REALTIME           0x01U
-#define APP_I2CVSESP32_CMD_NORMAL_SETTING     0x02U
-#define APP_I2CVSESP32_CMD_PEAK_SETTING       0x03U
+#define APP_I2C_ADDR_7BIT               (0x12U)
 
-/* Delay between frames when using AppI2CvsESP32_SendAll(). */
-#define APP_I2CVSESP32_INTER_FRAME_DELAY_MS   5U
+#define APP_I2C_TIMEOUT_MS              (100U)
+#define APP_I2C_DELAY_BETWEEN_FRAME_MS  (5U)
 
-/*
- * Frame format: CMD + DATA + Counter + CRC8
- * No start/end bytes are used because I2C already transfers each frame as one transaction.
- * CRC8 is calculated from frame[0] to the byte before CRC8.
- */
+#define APP_I2C_FRAME_COUNT             (4U)
+#define APP_I2C_EXTRA_DATA_SIZE         (10U)
+#define APP_I2C_MAX_PAYLOAD_PER_FRAME   (15U)
 
-/*
- * ControlFlags bit map, used in Frame 2 byte [1].
- * bit0 = BlinkYel_ENA1
- * bit1 = BlinkYel_ENA2
- * bit2 = Thaco_Blink
- * bit3 = CaoDiem_ENA
- * bit4..bit7 = reserved
- */
-#define APP_I2CVSESP32_FLAG_BLINK_YEL_ENA1    (1U << 0)
-#define APP_I2CVSESP32_FLAG_BLINK_YEL_ENA2    (1U << 1)
-#define APP_I2CVSESP32_FLAG_THACO_BLINK       (1U << 2)
-#define APP_I2CVSESP32_FLAG_CAO_DIEM_ENA      (1U << 3)
+/* counter + frame_id + payload_len + payload + crc */
+#define APP_I2C_FRAME_HEADER_SIZE       (3U)
+#define APP_I2C_FRAME_CRC_SIZE          (1U)
 
-/*
- * Frame 1 - REALTIME + BLINK YELLOW 1: 17 bytes
- * [0]  CMD = APP_I2CVSESP32_CMD_REALTIME
- * [1]  Date
- * [2]  Month
- * [3]  Year, last two digits only. Example: 2026 -> 26
- * [4]  Hour
- * [5]  Minute
- * [6]  Second
- * [7]  Voltage1
- * [8]  Voltage2
- * [9]  Current1
- * [10] Current2
- * [11] begin_hour1
- * [12] begin_min1
- * [13] end_hour1
- * [14] end_min1
- * [15] Counter
- * [16] CRC8 checksum of frame[0]..frame[15]
- */
-#define APP_I2CVSESP32_REALTIME_FRAME_SIZE        17U
-#define APP_I2CVSESP32_REALTIME_COUNTER_INDEX     15U
-#define APP_I2CVSESP32_REALTIME_CRC_INDEX         16U
+#define APP_I2C_MAX_FRAME_SIZE \
+    (APP_I2C_FRAME_HEADER_SIZE + APP_I2C_MAX_PAYLOAD_PER_FRAME + APP_I2C_FRAME_CRC_SIZE)
 
-/*
- * Frame 2 - NORMAL SETTING + CONTROL FLAGS + BLINK YELLOW 2: 17 bytes
- * [0]  CMD = APP_I2CVSESP32_CMD_NORMAL_SETTING
- * [1]  ControlFlags
- *      bit0 = BlinkYel_ENA1
- *      bit1 = BlinkYel_ENA2
- *      bit2 = Thaco_Blink
- *      bit3 = CaoDiem_ENA
- * [2]  X1
- * [3]  V1
- * [4]  GT1
- * [5]  X2
- * [6]  V2
- * [7]  GT2
- * [8]  X3
- * [9]  V3
- * [10] GT3
- * [11] begin_hour2
- * [12] begin_min2
- * [13] end_hour2
- * [14] end_min2
- * [15] Counter
- * [16] CRC8 checksum of frame[0]..frame[15]
- */
-#define APP_I2CVSESP32_NORMAL_FRAME_SIZE          17U
-#define APP_I2CVSESP32_NORMAL_COUNTER_INDEX       15U
-#define APP_I2CVSESP32_NORMAL_CRC_INDEX           16U
+/* ===================== PUBLIC FUNCTION ===================== */
 
-/*
- * Frame 3 - PEAK SETTING: 16 bytes
- * [0]  CMD = APP_I2CVSESP32_CMD_PEAK_SETTING
- * [1]  begin_hour3
- * [2]  begin_min3
- * [3]  end_hour3
- * [4]  end_min3
- * [5]  CaoDiem_X1
- * [6]  CaoDiem_V1
- * [7]  CaoDiem_GT1
- * [8]  CaoDiem_X2
- * [9]  CaoDiem_V2
- * [10] CaoDiem_GT2
- * [11] CaoDiem_X3
- * [12] CaoDiem_V3
- * [13] CaoDiem_GT3
- * [14] Counter
- * [15] CRC8 checksum of frame[0]..frame[14]
- */
-#define APP_I2CVSESP32_PEAK_FRAME_SIZE            16U
-#define APP_I2CVSESP32_PEAK_COUNTER_INDEX         14U
-#define APP_I2CVSESP32_PEAK_CRC_INDEX             15U
-
-#define APP_I2CVSESP32_MAX_FRAME_SIZE             APP_I2CVSESP32_NORMAL_FRAME_SIZE
-
-typedef struct
-{
-    I2C_HandleTypeDef *hi2c;
-    uint16_t slave_addr_7bit;
-    uint32_t timeout_ms;
-} AppI2CvsESP32_Config_t;
-
-typedef struct
-{
-    uint8_t date;
-    uint8_t month;
-    uint8_t year;       /* Last two digits only. Example: 2026 -> 26 */
-
-    uint8_t hour;
-    uint8_t minute;
-    uint8_t second;
-
-    uint8_t voltage1;
-    uint8_t voltage2;
-    uint8_t current1;
-    uint8_t current2;
-
-    uint8_t begin_hour1;
-    uint8_t begin_min1;
-    uint8_t end_hour1;
-    uint8_t end_min1;
-} AppI2CvsESP32_RealtimePayload_t;
-
-typedef struct
-{
-    uint8_t control_flags;
-
-    uint8_t x1;
-    uint8_t v1;
-    uint8_t gt1;
-
-    uint8_t x2;
-    uint8_t v2;
-    uint8_t gt2;
-
-    uint8_t x3;
-    uint8_t v3;
-    uint8_t gt3;
-
-    uint8_t begin_hour2;
-    uint8_t begin_min2;
-    uint8_t end_hour2;
-    uint8_t end_min2;
-} AppI2CvsESP32_NormalPayload_t;
-
-typedef struct
-{
-    /* begin == end means disabled. */
-    uint8_t begin_hour3;
-    uint8_t begin_min3;
-    uint8_t end_hour3;
-    uint8_t end_min3;
-
-    uint8_t peak_x1;
-    uint8_t peak_v1;
-    uint8_t peak_gt1;
-
-    uint8_t peak_x2;
-    uint8_t peak_v2;
-    uint8_t peak_gt2;
-
-    uint8_t peak_x3;
-    uint8_t peak_v3;
-    uint8_t peak_gt3;
-} AppI2CvsESP32_PeakPayload_t;
-
-typedef struct
-{
-    AppI2CvsESP32_RealtimePayload_t realtime;
-    AppI2CvsESP32_NormalPayload_t normal;
-    AppI2CvsESP32_PeakPayload_t peak;
-} AppI2CvsESP32_Payload_t;
-
-uint8_t AppI2CvsESP32_MakeControlFlags(uint8_t blink_yel_ena1,
-                                        uint8_t blink_yel_ena2,
-                                        uint8_t thaco_blink,
-                                        uint8_t cao_diem_ena);
-
-void AppI2CvsESP32_Init(const AppI2CvsESP32_Config_t *config);
-void AppI2CvsESP32_SetCounter(uint8_t counter);
-uint8_t AppI2CvsESP32_GetCounter(void);
-
-HAL_StatusTypeDef AppI2CvsESP32_SendRealtime(const AppI2CvsESP32_RealtimePayload_t *payload);
-HAL_StatusTypeDef AppI2CvsESP32_SendNormalSetting(const AppI2CvsESP32_NormalPayload_t *payload);
-HAL_StatusTypeDef AppI2CvsESP32_SendPeakSetting(const AppI2CvsESP32_PeakPayload_t *payload);
-HAL_StatusTypeDef AppI2CvsESP32_SendAll(const AppI2CvsESP32_Payload_t *payload);
-
-void AppI2CvsESP32_BuildRealtime(uint8_t frame[APP_I2CVSESP32_REALTIME_FRAME_SIZE],
-                                 const AppI2CvsESP32_RealtimePayload_t *payload,
-                                 uint8_t counter);
-void AppI2CvsESP32_BuildNormalSetting(uint8_t frame[APP_I2CVSESP32_NORMAL_FRAME_SIZE],
-                                      const AppI2CvsESP32_NormalPayload_t *payload,
-                                      uint8_t counter);
-void AppI2CvsESP32_BuildPeakSetting(uint8_t frame[APP_I2CVSESP32_PEAK_FRAME_SIZE],
-                                    const AppI2CvsESP32_PeakPayload_t *payload,
-                                    uint8_t counter);
+void AppI2CvsESP32_Process(void);
 
 #ifdef __cplusplus
 }
 #endif
 
-#endif /* APP_I2CVSESP32_H */
+#endif /* __APP_I2CVSESP32_H */
